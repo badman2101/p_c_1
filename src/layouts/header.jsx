@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/use-theme";
-import { Bell, ChevronsLeft, Moon, Search, Sun, User, LogOut, Settings } from "lucide-react";
+import { Bell, ChevronsLeft, Moon, Search, Sun, User, LogOut, Settings, MessageSquare, FileText } from "lucide-react";
 import profileImg from "@/assets/profile-image.jpg";
 import PropTypes from "prop-types";
 
@@ -61,10 +61,41 @@ export const Header = ({ collapsed, setCollapsed }) => {
                     <Moon size={20} className="hidden text-slate-400 dark:block" />
                 </button>
                 
-                <button className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors dark:hover:bg-slate-800">
-                    <Bell size={20} className="text-slate-500 dark:text-slate-400" />
-                    <span className="absolute right-2 top-2 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-[#0f172a]"></span>
-                </button>
+                <div className="flex items-center gap-x-1 sm:gap-x-2">
+                    {/* Tin nhắn nội bộ */}
+                    <button 
+                        className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors dark:hover:bg-slate-800"
+                        title="Tin nhắn nội bộ"
+                    >
+                        <MessageSquare size={19} className="text-slate-500 dark:text-slate-400" />
+                        <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#0f172a]">
+                            3
+                        </span>
+                    </button>
+
+                    {/* Đơn thư (quá hạn hoặc cần xử lý) */}
+                    <button 
+                        onClick={() => navigate('/don_thu')}
+                        className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors dark:hover:bg-slate-800"
+                        title="Đơn thư quá hạn"
+                    >
+                        <FileText size={19} className="text-slate-500 dark:text-slate-400" />
+                        <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#0f172a] animate-pulse">
+                            2
+                        </span>
+                    </button>
+
+                    {/* Thông báo chung */}
+                    <button 
+                        className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors dark:hover:bg-slate-800"
+                        title="Thông báo hệ thống"
+                    >
+                        <Bell size={19} className="text-slate-500 dark:text-slate-400" />
+                        <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#0f172a]">
+                            5
+                        </span>
+                    </button>
+                </div>
 
                 <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"></div>
                 
