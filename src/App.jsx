@@ -10,6 +10,7 @@ import UserPage from "./routes/user/page";
 import LoginPage from "./routes/login/page";
 import ProtectedRoute from './components/ProtectedRoute';
 import PetitionsPage from './routes/petitions/page';
+import ProfilePage from './routes/profile/page';
 
 function App() {
     const router = createBrowserRouter([
@@ -36,6 +37,10 @@ function App() {
                 {
                     path: "/don_thu",
                     element: <PetitionsPage/>,
+                },
+                {
+                    path: "/ho_so",
+                    element: <ProfilePage />,
                 },
             ],
         },
