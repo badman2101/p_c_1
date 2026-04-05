@@ -60,12 +60,12 @@ const DashboardPage = () => {
                             <Users size={24} />
                         </div>
                     </div>
-                    <div className="mt-4 flex items-center text-sm font-medium text-slate-500">
+                    {/* <div className="mt-4 flex items-center text-sm font-medium text-slate-500">
                         <span>Trực ban và chuyên án</span>
-                    </div>
+                    </div> */}
                 </div>
 
-                <div className="card border-l-4 border-l-emerald-500 shadow-sm border-transparent dark:border-transparent bg-white dark:bg-[#0f172a]">
+                {/* <div className="card border-l-4 border-l-emerald-500 shadow-sm border-transparent dark:border-transparent bg-white dark:bg-[#0f172a]">
                     <div className="card-header justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Nhiệm vụ tuần tra</p>
@@ -78,7 +78,7 @@ const DashboardPage = () => {
                     <div className="mt-4 flex items-center text-sm font-medium text-slate-500">
                         <span>Cập nhật 10 phút trước</span>
                     </div>
-                </div>
+                </div> */}
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-7">
@@ -135,7 +135,7 @@ const DashboardPage = () => {
             </div>
 
             {/* Bottom table for active cases */}
-            <div className="card overflow-hidden shadow-sm bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-0">
+            {/* <div className="card overflow-hidden shadow-sm bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-0">
                 <div className="card-header justify-between items-center bg-slate-50/50 dark:bg-slate-800/40 p-4 border-b border-slate-200 dark:border-slate-800">
                     <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Trọng án & Chuyên án đang điều tra</h2>
                     <button className="flex items-center text-sm font-medium text-slate-600 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors">
@@ -184,7 +184,7 @@ const DashboardPage = () => {
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div> */}
 
             <Footer />
         </div>
