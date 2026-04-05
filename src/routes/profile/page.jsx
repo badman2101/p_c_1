@@ -120,7 +120,7 @@ const ProfilePage = () => {
     };
 
     if (!currentUser) {
-        return <div className="p-8 text-center text-slate-500">Đang tải hồ sơ...</div>;
+        return <div className="p-8 text-center text-slate-500 dark:text-slate-400">Đang tải hồ sơ...</div>;
     }
 
     const roleConfig = ROLE_CONFIG[currentUser.role] || ROLE_CONFIG['user'];
@@ -301,7 +301,7 @@ const ProfilePage = () => {
                                     <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Đổi mật khẩu</h3>
                                     <div className="flex flex-col gap-y-5 max-w-md">
                                         <div className="flex flex-col gap-y-2 group">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 ml-1 group-focus-within:text-blue-500 transition-colors">Mật khẩu hiện tại</label>
+                                            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 ml-1 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400 transition-colors">Mật khẩu hiện tại</label>
                                             <div className="relative">
                                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
                                                     <Key size={18} />
@@ -320,9 +320,9 @@ const ProfilePage = () => {
                                         <div className="h-px bg-slate-100 dark:bg-slate-800 my-2"></div>
 
                                         <div className="flex flex-col gap-y-2 group">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 ml-1 group-focus-within:text-emerald-500 transition-colors">Mật khẩu mới</label>
+                                            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 ml-1 group-focus-within:text-emerald-500 dark:group-focus-within:text-emerald-400 transition-colors">Mật khẩu mới</label>
                                             <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-emerald-500 dark:group-focus-within:text-emerald-400 transition-colors">
                                                     <Key size={18} />
                                                 </div>
                                                 <input 
@@ -337,9 +337,9 @@ const ProfilePage = () => {
                                         </div>
 
                                         <div className="flex flex-col gap-y-2 group">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 ml-1 group-focus-within:text-emerald-500 transition-colors">Xác nhận mật khẩu mới</label>
+                                            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 ml-1 group-focus-within:text-emerald-500 dark:group-focus-within:text-emerald-400 transition-colors">Xác nhận mật khẩu mới</label>
                                             <div className="relative">
-                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-emerald-500 dark:group-focus-within:text-emerald-400 transition-colors">
                                                     <CheckCircle2 size={18} />
                                                 </div>
                                                 <input 
@@ -351,7 +351,7 @@ const ProfilePage = () => {
                                                     className="w-full pl-10 pr-4 py-3 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all shadow-sm" 
                                                 />
                                             </div>
-                                            <p className="text-xs text-slate-500 mt-2">Mật khẩu mới phải bao gồm ít nhất 6 ký tự và không được trùng với mật khẩu cũ.</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">Mật khẩu mới phải bao gồm ít nhất 6 ký tự và không được trùng với mật khẩu cũ.</p>
                                         </div>
 
                                         <div className="mt-4">
