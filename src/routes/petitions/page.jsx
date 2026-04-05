@@ -2,22 +2,22 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Plus, Search, Edit3, Trash2, Eye, X, Filter, AlertTriangle,
     CheckCircle2, Clock, Inbox, Calendar, FileText, Printer,
-    BarChart2, RefreshCw, TrendingUp, User, Tag, Type, MessageSquare, ClipboardList, PenTool
+    BarChart2, RefreshCw, TrendingUp, User, Tag, Type, MessageSquare, ClipboardList, PenTool, Database, Globe
 } from 'lucide-react';
 import { Pagination } from '../user/page';
-import { complainsApi } from '../../api/complainsApi';
+import { donthuApi } from '../../api/donthuApi';
 import { userApi } from '../../api/userApi';
 
 const STATUS_CONFIG = {
-    Pending:    { label: 'Chờ xử lý',    dot: 'bg-amber-500',   badge: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700',    bar: 'bg-amber-400' },
-    Processing: { label: 'Đang GQ',       dot: 'bg-blue-500',    badge: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700',          bar: 'bg-blue-400' },
-    Resolved:   { label: 'Đã giải quyết', dot: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700', bar: 'bg-emerald-400' },
-    Rejected:   { label: 'Từ chối',       dot: 'bg-slate-400',   badge: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600',        bar: 'bg-slate-400' },
+    'Chờ xử lý': { label: 'Chờ xử lý', dot: 'bg-amber-500', badge: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700', bar: 'bg-amber-400' },
+    'Đang xử lý': { label: 'Đang xử lý', dot: 'bg-blue-500', badge: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700', bar: 'bg-blue-400' },
+    'Đã giải quyết': { label: 'Đã giải quyết', dot: 'bg-emerald-500', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700', bar: 'bg-emerald-400' },
+    'Từ chối': { label: 'Từ chối', dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600', bar: 'bg-slate-400' },
 };
 
-function checkIfOverdue(deadline, status) {
-    if (!deadline || status === 'Resolved' || status === 'Rejected') return false;
-    return new Date(deadline) < new Date(new Date().setHours(0, 0, 0, 0));
+function checkIfOverdue(han_xu_ly, status) {
+    if (!han_xu_ly || status === 'Đã giải quyết' || status === 'Từ chối') return false;
+    return new Date(han_xu_ly) < new Date(new Date().setHours(0, 0, 0, 0));
 }
 
 export default function PetitionsPage() {
@@ -31,11 +31,12 @@ export default function PetitionsPage() {
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
+    const [assigneeFilter, setAssigneeFilter] = useState('All'); // NEW
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [showStats, setShowStats] = useState(false);
     
-    // Manage/Edit Modal
+    // Modal
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState('add');
     const [currentPetition, setCurrentPetition] = useState(null);
@@ -45,7 +46,7 @@ export default function PetitionsPage() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deletingPetition, setDeletingPetition] = useState(null);
 
-    // Toast Notification
+    // Toast
     const [toast, setToast] = useState(null);
     const showToast = (message, type = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
@@ -53,11 +54,25 @@ export default function PetitionsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(5);
 
+    const [currentUser, setCurrentUser] = useState(null);
+
     const fetchData = async () => {
         try {
             setIsLoading(true);
+            
+            const token = localStorage.getItem('token');
+            let loggedInUser = null;
+            if (token) {
+                try {
+                    loggedInUser = JSON.parse(token);
+                    setCurrentUser(loggedInUser);
+                } catch (e) {
+                    console.error("Lỗi parse token", e);
+                }
+            }
+
             const [petitionsData, usersData] = await Promise.all([
-                complainsApi.getComplains(),
+                donthuApi.getDonThus(),
                 userApi.getUsers()
             ]);
             
@@ -70,8 +85,16 @@ export default function PetitionsPage() {
             let finalPetitions = [];
             if (Array.isArray(petitionsData)) finalPetitions = petitionsData;
             else if (Array.isArray(petitionsData?.data)) finalPetitions = petitionsData.data;
-            else if (Array.isArray(petitionsData?.complains)) finalPetitions = petitionsData.complains;
+            else if (Array.isArray(petitionsData?.donthus)) finalPetitions = petitionsData.donthus;
             else if (petitionsData?.data?.data && Array.isArray(petitionsData.data.data)) finalPetitions = petitionsData.data.data;
+
+            // Phân quyền
+            if (loggedInUser && loggedInUser.role === 'user') {
+                finalPetitions = finalPetitions.filter(p => {
+                    const assignedId = typeof p.can_bo_thu_ly === 'object' && p.can_bo_thu_ly !== null ? p.can_bo_thu_ly.id : p.can_bo_thu_ly;
+                    return String(assignedId) === String(loggedInUser.id);
+                });
+            }
 
             setPetitions(finalPetitions);
             setUsers(finalUsers);
@@ -91,18 +114,26 @@ export default function PetitionsPage() {
     const filteredPetitions = useMemo(() => {
         const q = searchQuery.toLowerCase();
         return petitions.filter(p => {
-            const matchSearch = (p.title || '').toLowerCase().includes(q) || (p.id?.toString() || '').includes(q) || (p.type || '').toLowerCase().includes(q);
-            const matchStatus = statusFilter === 'All' || p.status === statusFilter;
+            const matchSearch = (p.information_nguoiguidon || '').toLowerCase().includes(q) 
+                || (p.id?.toString() || '').includes(q) 
+                || (p.tieu_de || '').toLowerCase().includes(q)
+                || (p.phan_loai || '').toLowerCase().includes(q)
+                || (p.noi_dung_don || '').toLowerCase().includes(q);
+            const matchStatus = statusFilter === 'All' || p.trang_thai === statusFilter;
             
-            const objDate = p.created_at ? p.created_at.split('T')[0] : '';
+            let pAssignedId = p.can_bo_thu_ly;
+            if (typeof pAssignedId === 'object' && pAssignedId !== null) pAssignedId = String(pAssignedId.id || '');
+            else pAssignedId = String(pAssignedId || '');
+            const matchAssignee = assigneeFilter === 'All' || pAssignedId === assigneeFilter;
+            
+            const objDate = p.ngay_tiep_nhan ? p.ngay_tiep_nhan.split('T')[0] : '';
             const matchFrom = !dateFrom || objDate >= dateFrom;
             const matchTo   = !dateTo   || objDate <= dateTo;
-            return matchSearch && matchStatus && matchFrom && matchTo;
+            return matchSearch && matchStatus && matchAssignee && matchFrom && matchTo;
         }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    }, [petitions, searchQuery, statusFilter, dateFrom, dateTo]);
+    }, [petitions, searchQuery, statusFilter, assigneeFilter, dateFrom, dateTo]);
 
-    // Reset page on filter change
-    useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, dateFrom, dateTo]);
+    useEffect(() => { setCurrentPage(1); }, [searchQuery, statusFilter, assigneeFilter, dateFrom, dateTo]);
 
     const totalPages = Math.max(1, Math.ceil(filteredPetitions.length / pageSize));
     const paginatedPetitions = useMemo(() => {
@@ -111,10 +142,11 @@ export default function PetitionsPage() {
     }, [filteredPetitions, currentPage, pageSize]);
 
     const stats = useMemo(() => {
-        const s = { total: petitions.length, Pending: 0, Processing: 0, Resolved: 0, Rejected: 0, overdue: 0 };
+        const s = { total: petitions.length, 'Chờ xử lý': 0, 'Đang xử lý': 0, 'Đã giải quyết': 0, 'Từ chối': 0, overdue: 0 };
         petitions.forEach(p => { 
-            s[p.status] = (s[p.status] || 0) + 1; 
-            if (checkIfOverdue(p.deadline, p.status)) s.overdue++; 
+            const statusStr = p.trang_thai || 'Chờ xử lý';
+            s[statusStr] = (s[statusStr] || 0) + 1; 
+            if (checkIfOverdue(p.han_xu_ly, statusStr)) s.overdue++; 
         });
         return s;
     }, [petitions]);
@@ -128,8 +160,8 @@ export default function PetitionsPage() {
             data.push({ month: `T${m}`, monthNum: m, value: 0 });
         }
         petitions.forEach(p => {
-            if (!p.created_at) return;
-            const m = new Date(p.created_at).getMonth() + 1;
+            if (!p.ngay_tiep_nhan) return;
+            const m = new Date(p.ngay_tiep_nhan).getMonth() + 1;
             const slot = data.find(d => d.monthNum === m);
             if (slot) slot.value++;
         });
@@ -143,14 +175,16 @@ export default function PetitionsPage() {
             setCurrentPetition({ ...petition });
         } else {
             setCurrentPetition({
-                title: '',
-                content: '',
-                type: '',
-                status: 'Pending',
-                assigned_to: '',
-                deadline: '',
-                result: '',
-                created_at: today
+                tieu_de: '',
+                phan_loai: 'Khiếu nại',
+                nguon_tin: '',
+                information_nguoiguidon: '',
+                noi_dung_don: '',
+                can_bo_thu_ly: '',
+                ket_qua_xu_ly: '',
+                ngay_tiep_nhan: today,
+                han_xu_ly: '',
+                trang_thai: 'Chờ xử lý'
             });
         }
         setIsModalOpen(true);
@@ -164,29 +198,31 @@ export default function PetitionsPage() {
         
         try {
             const payload = {
-                title: currentPetition.title,
-                content: currentPetition.content,
-                type: currentPetition.type,
-                status: currentPetition.status,
-                assigned_to: currentPetition.assigned_to || null,
-                deadline: currentPetition.deadline || null,
-                result: currentPetition.result || '',
-                created_at: currentPetition.created_at || today,
+                tieu_de: currentPetition.tieu_de,
+                phan_loai: currentPetition.phan_loai,
+                nguon_tin: currentPetition.nguon_tin,
+                information_nguoiguidon: currentPetition.information_nguoiguidon,
+                noi_dung_don: currentPetition.noi_dung_don,
+                can_bo_thu_ly: currentPetition.can_bo_thu_ly || null,
+                ket_qua_xu_ly: currentPetition.ket_qua_xu_ly || '',
+                ngay_tiep_nhan: currentPetition.ngay_tiep_nhan || today,
+                han_xu_ly: currentPetition.han_xu_ly || null,
+                trang_thai: currentPetition.trang_thai || 'Chờ xử lý',
             };
 
             if (modalMode === 'add') { 
-                await complainsApi.createComplain(payload);
-                await fetchData(); // Đảm bảo reload đủ thông tin thay vì nhét mảng thủ công
-                showToast('Thêm mới khiếu nại thành công!');
+                await donthuApi.createDonThu(payload);
+                await fetchData(); 
+                showToast('Thêm mới đơn thư thành công!');
             } else { 
-                await complainsApi.updateComplain(currentPetition.id, payload);
+                await donthuApi.updateDonThu(currentPetition.id, payload);
                 await fetchData();
-                showToast('Cập nhật khiếu nại thành công!');
+                showToast('Cập nhật đơn thư thành công!');
             }
             closeModal();
         } catch (error) {
-            console.error('Lỗi khi lưu đơn thư:', error);
-            showToast('Có lỗi xảy ra khi lưu thông tin. Vui lòng kiểm tra lại.', 'error');
+            console.error('Lỗi khi lưu:', error);
+            showToast('Có lỗi xảy ra khi lưu thông tin.', 'error');
         } finally {
             setIsSaving(false);
         }
@@ -195,19 +231,19 @@ export default function PetitionsPage() {
     const handleDelete = async () => { 
         if (!deletingPetition) return;
         try {
-            await complainsApi.deleteComplain(deletingPetition.id);
+            await donthuApi.deleteDonThu(deletingPetition.id);
             setPetitions(petitions.filter(p => p.id !== deletingPetition.id)); 
-            showToast('Đã xóa khiếu nại thành công!');
+            showToast('Đã xóa đơn thư!');
         } catch (error) {
-            console.error('Lỗi xóa đơn thư:', error);
-            showToast('Không thể xóa khiếu nại. Vui lòng thử lại.', 'error');
+            console.error('Lỗi xóa:', error);
+            showToast('Không thể xóa. Thử lại sau.', 'error');
         } finally {
             setIsDeleteModalOpen(false);
             setDeletingPetition(null);
         }
     };
     
-    const hasActiveFilter = searchQuery || statusFilter !== 'All' || dateFrom || dateTo;
+    const hasActiveFilter = searchQuery || statusFilter !== 'All' || assigneeFilter !== 'All' || dateFrom || dateTo;
 
     const handlePrint = () => {
         const content = printRef.current.innerHTML;
@@ -219,30 +255,25 @@ export default function PetitionsPage() {
 
     const getUserName = (assignedToValue) => {
         if (!assignedToValue) return;
-        
         let idToCheck = assignedToValue;
         if (typeof assignedToValue === 'object' && assignedToValue !== null) {
             if (assignedToValue.name) return assignedToValue.name;
             idToCheck = assignedToValue.id;
         }
-
         const user = users.find(u => String(u.id) === String(idToCheck));
         return user ? user.name : `ID: ${idToCheck}`;
     };
 
-    // Beautiful Inputs config 
     const inputCls = "w-full py-2.5 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all disabled:bg-slate-100/50 dark:disabled:bg-slate-800/60 disabled:text-slate-500 disabled:cursor-not-allowed";
 
     return (
         <div className="flex flex-col gap-5 w-full pb-10">
-
-            {/* HEADER */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
                     <h1 className="text-2xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-                        <FileText size={24} className="text-blue-500" /> Quản lý Khiếu nại
+                        <FileText size={24} className="text-blue-500" /> Quản lý Đơn thư
                     </h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Theo dõi, phân công và xử lý các khiếu nại</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Theo dõi, phân công và xử lý các loại đơn thư từ người dân</p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                     <button onClick={() => setShowStats(v => !v)} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all border ${showStats ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'}`}>
@@ -251,19 +282,20 @@ export default function PetitionsPage() {
                     <button onClick={handlePrint} className="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors">
                         <Printer size={17} /> In danh sách
                     </button>
-                    <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-medium text-sm shadow-sm transition-colors">
-                        <Plus size={17} /> Thêm khiếu nại
-                    </button>
+                    {(!currentUser || currentUser.role !== 'user') && (
+                        <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-medium text-sm shadow-sm transition-colors">
+                            <Plus size={17} /> Tiếp nhận đơn mới
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* STAT CARDS */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
-                    { label: 'Tổng khiếu nại',  value: stats.total,                     icon: FileText,      color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-900/30',    border: 'border-blue-100 dark:border-blue-800' },
-                    { label: 'Đang xử lý',     value: stats.Pending+stats.Processing,  icon: Clock,         color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-900/30',  border: 'border-amber-100 dark:border-amber-800' },
-                    { label: 'Quá hạn',         value: stats.overdue,                   icon: AlertTriangle, color: 'text-rose-600 dark:text-rose-400',    bg: 'bg-rose-50 dark:bg-rose-900/30',    border: 'border-rose-100 dark:border-rose-800', highlight: stats.overdue > 0 },
-                    { label: 'Đã hoàn thành',  value: stats.Resolved,                  icon: CheckCircle2,  color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-100 dark:border-emerald-800' },
+                    { label: 'Tổng đơn thư',  value: stats.total,                     icon: Database,      color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-900/30',    border: 'border-blue-100 dark:border-blue-800' },
+                    { label: 'Đang xử lý',     value: stats['Chờ xử lý']+stats['Đang xử lý'],  icon: Clock,         color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-900/30',  border: 'border-amber-100 dark:border-amber-800' },
+                    { label: 'Cần chú ý',      value: stats.overdue,                   icon: AlertTriangle, color: 'text-rose-600 dark:text-rose-400',    bg: 'bg-rose-50 dark:bg-rose-900/30',    border: 'border-rose-100 dark:border-rose-800', highlight: stats.overdue > 0 },
+                    { label: 'Đã hoàn thành',  value: stats['Đã giải quyết'],                  icon: CheckCircle2,  color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-100 dark:border-emerald-800' },
                 ].map((s, i) => (
                     <div key={i} className={`bg-white dark:bg-slate-800/80 p-5 rounded-xl border ${s.highlight ? 'border-rose-200 dark:border-rose-700 ring-1 ring-rose-200 dark:ring-rose-700' : s.border} shadow-sm flex items-center gap-4`}>
                         <div className={`p-3 rounded-xl ${s.bg} ${s.color} flex-shrink-0`}><s.icon size={20} /></div>
@@ -275,12 +307,11 @@ export default function PetitionsPage() {
                 ))}
             </div>
 
-            {/* THỐNG KÊ MỞ RỘNG */}
             {showStats && (
                 <div className="bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div>
                         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-5 flex items-center gap-2">
-                            <TrendingUp size={16} className="text-indigo-500" /> Số lượng / 7 tháng gần nhất
+                            <TrendingUp size={16} className="text-indigo-500" /> Tiếp nhận / 7 tháng
                         </h3>
                         <div className="flex items-end gap-3 h-36">
                             {monthData.map((d, i) => (
@@ -297,7 +328,7 @@ export default function PetitionsPage() {
                     </div>
                     <div>
                         <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-5 flex items-center gap-2">
-                            <BarChart2 size={16} className="text-indigo-500" /> Tỉ lệ theo trạng thái
+                            <BarChart2 size={16} className="text-indigo-500" /> Trạng thái hồ sơ
                         </h3>
                         <div className="flex flex-col gap-3">
                             {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
@@ -323,54 +354,53 @@ export default function PetitionsPage() {
                 </div>
             )}
 
-            {/* BỘ LỌC */}
             <div className="bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
-                <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+                <div className="flex flex-col xl:flex-row gap-3 items-start xl:items-center">
                     <div className="relative flex-1 min-w-0 w-full">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-                        <input type="text" placeholder="Tìm theo ID, tiêu đề, loại khiếu nại..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                        <input type="text" placeholder="Tìm theo ID, tiêu đề, người gửi, nội dung, loại..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 transition-colors" />
                     </div>
-                    <div className="flex flex-wrap gap-2 items-center w-full lg:w-auto">
+                    <div className="flex flex-wrap gap-2 items-center w-full xl:w-auto">
                         <div className="relative">
                             <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
                                 className="pl-8 pr-8 py-2.5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 appearance-none cursor-pointer">
                                 <option value="All">Tất cả trạng thái</option>
-                                <option value="Pending">Chờ xử lý</option>
-                                <option value="Processing">Đang giải quyết</option>
-                                <option value="Resolved">Đã giải quyết</option>
-                                <option value="Rejected">Từ chối</option>
+                                {Object.values(STATUS_CONFIG).map(s => <option key={s.label} value={s.label}>{s.label}</option>)}
                             </select>
                         </div>
+                        
+                        {(!currentUser || currentUser.role !== 'user') && (
+                            <div className="relative">
+                                <User size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                <select value={assigneeFilter} onChange={e => setAssigneeFilter(e.target.value)}
+                                    className="pl-8 pr-8 py-2.5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 appearance-none cursor-pointer">
+                                    <option value="All">Tất cả cán bộ</option>
+                                    <option value="">Chưa phân công</option>
+                                    {users.map(u => <option key={u.id} value={String(u.id)}>{u.name || `User ${u.id}`}</option>)}
+                                </select>
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-1.5 px-3 py-2.5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 rounded-lg text-sm">
                             <Calendar size={13} className="text-slate-400 flex-shrink-0" />
-                            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} title="Từ ngày (Tạo)"
+                            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} title="Từ ngày tiếp nhận"
                                 className="bg-transparent outline-none text-slate-600 dark:text-slate-300 text-sm w-[120px] cursor-pointer" />
                             <span className="text-slate-300 dark:text-slate-600">—</span>
-                            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} title="Đến ngày (Tạo)"
+                            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} title="Đến ngày tiếp nhận"
                                 className="bg-transparent outline-none text-slate-600 dark:text-slate-300 text-sm w-[120px] cursor-pointer" />
                         </div>
                         {hasActiveFilter && (
-                            <button onClick={() => { setSearchQuery(''); setStatusFilter('All'); setDateFrom(''); setDateTo(''); }}
+                            <button onClick={() => { setSearchQuery(''); setStatusFilter('All'); setAssigneeFilter('All'); setDateFrom(''); setDateTo(''); }}
                                 className="flex items-center gap-1.5 px-3 py-2.5 text-sm text-slate-500 dark:text-slate-400 hover:text-rose-500 border border-slate-200 dark:border-slate-600 hover:border-rose-200 dark:hover:border-rose-700 bg-white dark:bg-slate-800 rounded-lg transition-colors">
                                 <RefreshCw size={13} /> Xóa lọc
                             </button>
                         )}
                     </div>
                 </div>
-                {hasActiveFilter && (
-                    <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-slate-400">Kết quả:</span>
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{filteredPetitions.length} khiếu nại</span>
-                        {statusFilter !== 'All' && <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">{STATUS_CONFIG[statusFilter]?.label}</span>}
-                        {dateFrom && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">Từ: {dateFrom}</span>}
-                        {dateTo   && <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">Đến: {dateTo}</span>}
-                    </div>
-                )}
             </div>
 
-            {/* TABLE */}
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center h-64 text-slate-500 bg-white dark:bg-slate-800/80 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <RefreshCw className="animate-spin mb-3 text-blue-500" size={32} />
@@ -379,43 +409,53 @@ export default function PetitionsPage() {
             ) : (
                 <div className="bg-white dark:bg-slate-800/80 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
                     <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
-                        <table className="w-full min-w-[850px] text-left">
+                        <table className="w-full min-w-[1050px] text-left">
                             <thead className="sticky top-0 z-10">
                                 <tr className="bg-slate-50 dark:bg-slate-700/80 border-b border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wide">
-                                    <th className="py-3.5 px-5 whitespace-nowrap w-[100px]">ID</th>
-                                    <th className="py-3.5 px-5 w-[160px]">Thông tin loại</th>
-                                    <th className="py-3.5 px-5 min-w-[200px]">Tiêu Đề &amp; Nội Dung</th>
-                                    <th className="py-3.5 px-5 w-[160px]">Phân công</th>
-                                    <th className="py-3.5 px-5 w-[150px]">Trạng Thái</th>
+                                    <th className="py-3.5 px-5 whitespace-nowrap">Mã Đơn</th>
+                                    <th className="py-3.5 px-5 w-[140px]">Thông tin loại</th>
+                                    <th className="py-3.5 px-5 min-w-[160px]">Người gửi & Nguồn</th>
+                                    <th className="py-3.5 px-5 min-w-[220px]">Tiêu đề & Nội Dung</th>
+                                    <th className="py-3.5 px-5 w-[140px]">Phân công</th>
+                                    <th className="py-3.5 px-5 w-[160px]">Trạng Thái & Kết quả</th>
                                     <th className="py-3.5 px-5 text-right w-[110px]">Thao Tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                 {paginatedPetitions.map(petition => {
-                                    const isOverdue = checkIfOverdue(petition.deadline, petition.status);
-                                    const cfg = STATUS_CONFIG[petition.status] || STATUS_CONFIG.Pending;
-                                    const assignedName = getUserName(petition.assigned_to);
+                                    const isOverdue = checkIfOverdue(petition.han_xu_ly, petition.trang_thai);
+                                    const cfg = STATUS_CONFIG[petition.trang_thai] || STATUS_CONFIG['Chờ xử lý'];
+                                    const assignedName = getUserName(petition.can_bo_thu_ly);
                                     
                                     return (
                                         <tr key={petition.id} className={`transition-colors group hover:bg-slate-50/80 dark:hover:bg-slate-700/40 ${isOverdue ? 'bg-rose-50/40 dark:bg-rose-900/10' : ''}`}>
                                             <td className="py-4 px-5 whitespace-nowrap">
                                                 <div className="flex items-center gap-1.5">
                                                     {isOverdue && <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse flex-shrink-0" />}
-                                                    <span className="text-sm font-mono font-medium text-slate-700 dark:text-slate-300">KN-{petition.id}</span>
+                                                    <span className="text-sm font-mono font-medium text-slate-700 dark:text-slate-300">DT-{petition.id}</span>
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5">
-                                                <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{petition.type || 'Chưa phân loại'}</div>
-                                                <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5" title="Ngày nhận (Ngày tạo)">
-                                                    <Calendar size={11} /> {petition.created_at ? petition.created_at.split('T')[0] : '---'}
+                                                <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{petition.phan_loai || 'Chưa rõ'}</div>
+                                                <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5" title="Ngày tiếp nhận">
+                                                    <Calendar size={11} /> Nhận: {petition.ngay_tiep_nhan ? petition.ngay_tiep_nhan.split('T')[0] : '---'}
+                                                </div>
+                                                {petition.han_xu_ly && (
+                                                    <div className={`text-xs flex items-center gap-1 mt-0.5 ${isOverdue ? 'text-rose-500 font-semibold' : 'text-amber-600 dark:text-amber-500'}`} title="Hạn xử lý">
+                                                        <Clock size={11} /> Hạn: {petition.han_xu_ly.split('T')[0]}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="py-4 px-5">
+                                                <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate" title={petition.information_nguoiguidon}>{petition.information_nguoiguidon}</div>
+                                                <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5" title="Nguồn tin">
+                                                    <Globe size={11} /> {petition.nguon_tin || 'Trực tiếp'}
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-5 max-w-sm">
-                                                <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate" title={petition.title}>{petition.title}</div>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-xs text-slate-400 dark:text-slate-500 truncate" title={petition.content}>{petition.content}</span>
-                                                    {isOverdue && <span className="text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/40 px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0">Quá hạn</span>}
-                                                </div>
+                                            <td className="py-4 px-5">
+                                                <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-0.5 line-clamp-1" title={petition.tieu_de}>{petition.tieu_de || '---'}</div>
+                                                <div className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2" title={petition.noi_dung_don}>{petition.noi_dung_don}</div>
+                                                {isOverdue && <span className="mt-1 text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/40 px-1.5 py-0.5 rounded text-[10px] font-semibold inline-block">Quá hạn xử lý</span>}
                                             </td>
                                             <td className="py-4 px-5">
                                                 <div className="flex items-center gap-1.5 text-sm">
@@ -424,23 +464,25 @@ export default function PetitionsPage() {
                                                         {assignedName || 'Chưa phân công'}
                                                     </span>
                                                 </div>
-                                                {petition.deadline && (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5" title="Hạn xử lý">
-                                                        <Clock size={11} /> Hạn: {petition.deadline.split('T')[0]}
-                                                    </div>
-                                                )}
                                             </td>
                                             <td className="py-4 px-5">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${cfg.badge}`}>
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${cfg.badge} mb-1.5`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}></span>
                                                     {cfg.label}
                                                 </span>
+                                                {petition.ket_qua_xu_ly && (
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded border border-slate-100 dark:border-slate-700" title={petition.ket_qua_xu_ly}>
+                                                        <span className="font-semibold text-slate-600 dark:text-slate-300">KQ: </span>{petition.ket_qua_xu_ly}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="py-4 px-5 text-right whitespace-nowrap">
                                                 <div className="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => openModal('view', petition)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-md transition-colors" title="Xem"><Eye size={15} /></button>
                                                     <button onClick={() => openModal('edit', petition)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-md transition-colors" title="Sửa"><Edit3 size={15} /></button>
-                                                    <button onClick={() => { setDeletingPetition(petition); setIsDeleteModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-md transition-colors" title="Xóa"><Trash2 size={15} /></button>
+                                                    {(!currentUser || currentUser.role !== 'user') && (
+                                                        <button onClick={() => { setDeletingPetition(petition); setIsDeleteModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-md transition-colors" title="Xóa"><Trash2 size={15} /></button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -448,10 +490,9 @@ export default function PetitionsPage() {
                                 })}
                                 {filteredPetitions.length === 0 && (
                                     <tr>
-                                        <td colSpan="6" className="py-16 text-center text-slate-400 dark:text-slate-500">
+                                        <td colSpan="7" className="py-16 text-center text-slate-400 dark:text-slate-500">
                                             <Inbox size={38} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" strokeWidth={1.5} />
-                                            <p className="text-sm font-medium">Không tìm thấy khiếu nại phù hợp</p>
-                                            <p className="text-xs mt-1">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm</p>
+                                            <p className="text-sm font-medium">Không tìm thấy đơn thư</p>
                                         </td>
                                     </tr>
                                 )}
@@ -459,124 +500,108 @@ export default function PetitionsPage() {
                         </table>
                     </div>
                     {filteredPetitions.length > 0 && (
-                        <Pagination
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            pageSize={pageSize}
-                            pageSizeOptions={[5, 10, 20]}
-                            onPageChange={setCurrentPage}
-                            onPageSizeChange={(s) => { setPageSize(s); setCurrentPage(1); }}
+                        <Pagination 
+                            currentPage={currentPage} totalPages={totalPages} pageSize={pageSize} pageSizeOptions={[5, 10, 20]} 
+                            onPageChange={setCurrentPage} onPageSizeChange={s => { setPageSize(s); setCurrentPage(1); }} 
                             totalItems={filteredPetitions.length}
                         />
                     )}
                 </div>
             )}
 
-            {/* NỘI DUNG IN ẨN */}
             <div ref={printRef} style={{ display: 'none' }}>
-                <h1>DANH SÁCH KHIẾU NẠI CỦA CÔNG DÂN</h1>
-                <p className="subtitle">Ngày in: {new Date().toLocaleDateString('vi-VN')} — Đơn vị: Cơ quan Công an</p>
-                <div className="filter-info">Bộ lọc: {statusFilter !== 'All' ? STATUS_CONFIG[statusFilter]?.label : 'Tất cả'}{dateFrom ? ` | Từ: ${dateFrom}` : ''}{dateTo ? ` | Đến: ${dateTo}` : ''}{searchQuery ? ` | Từ khóa: "${searchQuery}"` : ''}</div>
-                <div className="stats-row">
-                    <div className="stat-box"><div className="stat-num" style={{color:'#3b82f6'}}>{stats.total}</div><div className="stat-label">Tổng đơn</div></div>
-                    <div className="stat-box"><div className="stat-num" style={{color:'#f59e0b'}}>{stats.Pending+stats.Processing}</div><div className="stat-label">Đang xử lý</div></div>
-                    <div className="stat-box"><div className="stat-num" style={{color:'#dc2626'}}>{stats.overdue}</div><div className="stat-label">Quá hạn</div></div>
-                    <div className="stat-box"><div className="stat-num" style={{color:'#10b981'}}>{stats.Resolved}</div><div className="stat-label">Hoàn thành</div></div>
-                </div>
+                <h1>DANH SÁCH ĐƠN THƯ</h1>
+                <p className="subtitle">Ngày in: {new Date().toLocaleDateString('vi-VN')} — Hệ thống quản lý</p>
+                <div className="filter-info">Bộ lọc: {statusFilter}{dateFrom ? ` | Từ: ${dateFrom}` : ''}{dateTo ? ` | Đến: ${dateTo}` : ''}</div>
                 <table>
-                    <thead><tr><th>ID</th><th>Loại</th><th>Tiêu đề</th><th>Ngày tiếp nhận</th><th>Hạn chót</th><th>Phân công</th><th>Trạng thái</th></tr></thead>
+                    <thead><tr><th>Mã</th><th>Tiêu đề</th><th>Phân loại</th><th>Người gửi</th><th>Nội dung</th><th>Kết quả xử lý</th><th>Tiếp nhận</th><th>Hạn XL</th><th>Trạng thái</th></tr></thead>
                     <tbody>
-                        {filteredPetitions.map((p) => (
+                        {filteredPetitions.map(p => (
                             <tr key={p.id}>
-                                <td>{p.id}</td>
-                                <td>{p.type}</td>
-                                <td>{p.title}{checkIfOverdue(p.deadline, p.status) && <span className="overdue"> ⚠ Quá hạn</span>}</td>
-                                <td>{p.created_at ? p.created_at.split('T')[0] : '---'}</td>
-                                <td>{p.deadline ? p.deadline.split('T')[0] : '---'}</td>
-                                <td>{getUserName(p.assigned_to) || '---'}</td>
-                                <td>{STATUS_CONFIG[p.status]?.label}</td>
+                                <td>DT-{p.id}</td><td>{p.tieu_de}</td><td>{p.phan_loai}</td><td>{p.information_nguoiguidon}</td><td>{p.noi_dung_don}</td><td>{p.ket_qua_xu_ly}</td>
+                                <td>{p.ngay_tiep_nhan ? p.ngay_tiep_nhan.split('T')[0] : ''}</td><td>{p.han_xu_ly ? p.han_xu_ly.split('T')[0] : ''}</td><td>{p.trang_thai}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
-                <p className="footer">Tổng: {filteredPetitions.length} đơn | In lúc {new Date().toLocaleTimeString('vi-VN')}</p>
             </div>
 
-            {/* FORM MODAL */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[2px]" onClick={closeModal}>
                     <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
                             <h2 className="text-base font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-                                {modalMode === 'add' ? <Plus className="text-blue-500" size={18}/> 
-                                : modalMode === 'edit' ? <Edit3 className="text-amber-500" size={18}/> 
-                                : <Eye className="text-slate-500" size={18}/>}
-                                {modalMode === 'add' ? 'Thêm mới khiếu nại' : modalMode === 'edit' ? 'Cập nhật khiếu nại' : 'Chi tiết khiếu nại'}
+                                {modalMode === 'add' ? <Plus className="text-blue-500" size={18}/> : modalMode === 'edit' ? <Edit3 className="text-amber-500" size={18}/> : <Eye className="text-slate-500" size={18}/>}
+                                {modalMode === 'add' ? 'Tiếp nhận đơn' : modalMode === 'edit' ? 'Cập nhật đơn' : 'Chi tiết đơn'}
                             </h2>
                             <button onClick={closeModal} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"><X size={18} /></button>
                         </div>
                         <div className="p-5 md:p-6 overflow-y-auto flex-1 custom-scrollbar">
-                            {currentPetition && checkIfOverdue(currentPetition.deadline, currentPetition.status) && (
-                                <div className="mb-6 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800 text-rose-700 dark:text-rose-300 px-4 py-3.5 rounded-lg flex items-start gap-3 shadow-sm">
-                                    <AlertTriangle size={18} className="shrink-0 mt-0.5 text-rose-500" />
-                                    <div>
-                                        <h4 className="text-sm font-semibold">Cảnh báo: Khiếu nại quá hạn xử lý</h4>
-                                        <p className="text-xs mt-1 opacity-80">Đã vượt quá ngày hết hạn thiết lập mà hồ sơ này chưa được giải quyết xong.</p>
-                                    </div>
-                                </div>
-                            )}
                             <form id="petitionForm" onSubmit={handleSave} className="space-y-5">
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Tiêu đề phản ánh <span className="text-rose-500">*</span></label>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Tiêu đề đơn thư <span className="text-rose-500">*</span></label>
                                     <div className="relative">
                                         <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Type size={16} /></div>
-                                        <input type="text" required disabled={modalMode === 'view'} value={currentPetition?.title || ''} onChange={e => setCurrentPetition({...currentPetition, title: e.target.value})} className={`${inputCls} pl-10`} placeholder="Nhập tiêu đề khiếu nại ngắn gọn" />
+                                        <input type="text" required disabled={modalMode === 'view'} value={currentPetition?.tieu_de || ''} onChange={e => setCurrentPetition({...currentPetition, tieu_de: e.target.value})} className={`${inputCls} pl-10`} placeholder="Tiêu đề tóm tắt vụ việc..." />
                                     </div>
                                 </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div className="space-y-1.5">
-                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Ngày nhận đơn (Ngày tạo) <span className="text-rose-500">*</span></label>
+                                    <div className="space-y-1.5 md:col-span-1">
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Ngày tiếp nhận <span className="text-rose-500">*</span></label>
                                         <div className="relative">
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Calendar size={16} /></div>
-                                            <input type="date" required disabled={modalMode === 'view'} value={currentPetition?.created_at ? currentPetition.created_at.split('T')[0] : ''} onChange={e => setCurrentPetition({...currentPetition, created_at: e.target.value})} className={`${inputCls} pl-10`} />
+                                            <input type="date" required disabled={modalMode === 'view'} value={currentPetition?.ngay_tiep_nhan ? currentPetition.ngay_tiep_nhan.split('T')[0] : ''} onChange={e => setCurrentPetition({...currentPetition, ngay_tiep_nhan: e.target.value})} className={`${inputCls} pl-10`} />
                                         </div>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Loại khiếu nại</label>
-                                        <div className="relative">
-                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Tag size={16} /></div>
-                                            <input type="text" disabled={modalMode === 'view'} value={currentPetition?.type || ''} onChange={e => setCurrentPetition({...currentPetition, type: e.target.value})} className={`${inputCls} pl-10`} placeholder="VD: Gây rối trật tự, Lừa đảo..." />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Hạn xử lý (Deadline)</label>
+                                    <div className="space-y-1.5 md:col-span-1">
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Hạn chót xử lý (Deadline)</label>
                                         <div className="relative">
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Clock size={16} /></div>
-                                            <input type="date" disabled={modalMode === 'view'} value={currentPetition?.deadline ? currentPetition.deadline.split('T')[0] : ''} onChange={e => setCurrentPetition({...currentPetition, deadline: e.target.value})} className={`${inputCls} pl-10`} />
+                                            <input type="date" disabled={modalMode === 'view'} value={currentPetition?.han_xu_ly ? currentPetition.han_xu_ly.split('T')[0] : ''} onChange={e => setCurrentPetition({...currentPetition, han_xu_ly: e.target.value})} className={`${inputCls} pl-10`} />
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Trạng thái <span className="text-rose-500">*</span></label>
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Phân loại <span className="text-rose-500">*</span></label>
                                         <div className="relative">
-                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><AlertTriangle size={16} /></div>
-                                            <select disabled={modalMode === 'view'} value={currentPetition?.status || 'Pending'} onChange={e => setCurrentPetition({...currentPetition, status: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
-                                                <option value="Pending">Chờ xử lý</option>
-                                                <option value="Processing">Đang giải quyết</option>
-                                                <option value="Resolved">Đã giải quyết</option>
-                                                <option value="Rejected">Từ chối</option>
+                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Tag size={16} /></div>
+                                            <select disabled={modalMode === 'view'} value={currentPetition?.phan_loai || 'Khiếu nại'} onChange={e => setCurrentPetition({...currentPetition, phan_loai: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
+                                                <option value="Khiếu nại">Khiếu nại</option>
+                                                <option value="Tố cáo">Tố cáo</option>
+                                                <option value="Kiến nghị">Kiến nghị</option>
+                                                <option value="Phản ánh">Phản ánh</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Nguồn tin</label>
+                                        <div className="relative">
+                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Globe size={16} /></div>
+                                            <input type="text" disabled={modalMode === 'view'} value={currentPetition?.nguon_tin || ''} onChange={e => setCurrentPetition({...currentPetition, nguon_tin: e.target.value})} className={`${inputCls} pl-10`} placeholder="Trực tiếp, Bưu điện, Cổng TTĐT..." />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Thông tin người gửi <span className="text-rose-500">*</span></label>
+                                        <div className="relative">
+                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={16} /></div>
+                                            <input type="text" required disabled={modalMode === 'view'} value={currentPetition?.information_nguoiguidon || ''} onChange={e => setCurrentPetition({...currentPetition, information_nguoiguidon: e.target.value})} className={`${inputCls} pl-10`} placeholder="Họ tên, SĐT, Địa chỉ người gửi đơn..." />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Cán bộ thụ lý</label>
+                                        <div className="relative">
+                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={16} /></div>
+                                            <select disabled={modalMode === 'view' || (currentUser && currentUser.role === 'user')} value={(typeof currentPetition?.can_bo_thu_ly === 'object' ? currentPetition?.can_bo_thu_ly?.id : currentPetition?.can_bo_thu_ly) || ''} onChange={e => setCurrentPetition({...currentPetition, can_bo_thu_ly: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
+                                                <option value="">-- Chưa được phân công --</option>
+                                                {users.map(u => <option key={u.id} value={u.id}>{u.name || `User ${u.id}`}</option>)}
                                             </select>
                                         </div>
                                     </div>
                                     <div className="space-y-1.5 md:col-span-2">
-                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Phân công người giải quyết</label>
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Trạng thái <span className="text-rose-500">*</span></label>
                                         <div className="relative">
-                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={16} /></div>
-                                            <select disabled={modalMode === 'view'} value={(typeof currentPetition?.assigned_to === 'object' ? currentPetition?.assigned_to?.id : currentPetition?.assigned_to) || ''} onChange={e => setCurrentPetition({...currentPetition, assigned_to: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
-                                                <option value="">-- Chưa được phân công (Gửi thẳng ban chuyên trách) --</option>
-                                                {users.map(u => (
-                                                    <option key={u.id} value={u.id}>{u.name || `User ${u.id}`}</option>
-                                                ))}
+                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><AlertTriangle size={16} /></div>
+                                            <select disabled={modalMode === 'view'} value={currentPetition?.trang_thai || 'Chờ xử lý'} onChange={e => setCurrentPetition({...currentPetition, trang_thai: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer w-full md:w-1/2`}>
+                                                {Object.values(STATUS_CONFIG).map(s => <option key={s.label} value={s.label}>{s.label}</option>)}
                                             </select>
                                         </div>
                                     </div>
@@ -585,26 +610,22 @@ export default function PetitionsPage() {
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-1">
                                         <MessageSquare size={15} className="text-slate-400"/> Nội dung chi tiết <span className="text-rose-500">*</span>
                                     </label>
-                                    <textarea required disabled={modalMode === 'view'} value={currentPetition?.content || ''} onChange={e => setCurrentPetition({...currentPetition, content: e.target.value})} className={`${inputCls} resize-none h-28 leading-relaxed`} placeholder="Mô tả chi tiết nội dung sự việc..." />
+                                    <textarea required disabled={modalMode === 'view'} value={currentPetition?.noi_dung_don || ''} onChange={e => setCurrentPetition({...currentPetition, noi_dung_don: e.target.value})} className={`${inputCls} resize-none h-24 leading-relaxed`} placeholder="Nội dung chính..." />
                                 </div>
-                                {(modalMode !== 'add' || currentPetition?.result) && (
-                                    <div className="space-y-1.5">
-                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-1">
-                                            <ClipboardList size={15} className="text-emerald-500"/> Kết quả giải quyết
-                                        </label>
-                                        <textarea disabled={modalMode === 'view'} value={currentPetition?.result || ''} onChange={e => setCurrentPetition({...currentPetition, result: e.target.value})} className={`${inputCls} resize-none h-24 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-200/60 dark:border-emerald-800/50 focus:border-emerald-500 focus:ring-emerald-500/20 leading-relaxed`} placeholder="Ghi chú kết quả sau khi đã giải quyết xong..." />
-                                    </div>
-                                )}
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-1">
+                                        <ClipboardList size={15} className="text-emerald-500"/> Kết quả xử lý
+                                    </label>
+                                    <textarea disabled={modalMode === 'view'} value={currentPetition?.ket_qua_xu_ly || ''} onChange={e => setCurrentPetition({...currentPetition, ket_qua_xu_ly: e.target.value})} className={`${inputCls} resize-none h-20 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-200/60 dark:border-emerald-800/50 focus:border-emerald-500 focus:ring-emerald-500/20`} placeholder="Kết quả giải quyết hồ sơ..." />
+                                </div>
                             </form>
                         </div>
                         <div className="p-4 md:px-6 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-b-xl flex-shrink-0">
-                            <button onClick={closeModal} disabled={isSaving} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 hover:text-slate-800 transition-all disabled:opacity-50 shadow-sm">
-                                {modalMode === 'view' ? 'Đóng lại' : 'Hủy bỏ'}
-                            </button>
+                            <button onClick={closeModal} disabled={isSaving} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 hover:text-slate-800 transition-all disabled:opacity-50 shadow-sm">{modalMode === 'view' ? 'Đóng lại' : 'Hủy bỏ'}</button>
                             {modalMode !== 'view' && (
-                                <button form="petitionForm" type="submit" disabled={isSaving} className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
+                                <button form="petitionForm" type="submit" disabled={isSaving} className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-lg shadow-sm transition-all flex items-center gap-2">
                                     {isSaving ? <RefreshCw size={16} className="animate-spin" /> : <PenTool size={16} />}
-                                    {modalMode === 'add' ? 'Tạo khiếu nại' : 'Lưu cập nhật'}
+                                    {modalMode === 'add' ? 'Lưu đơn' : 'Cập nhật'}
                                 </button>
                             )}
                         </div>
@@ -612,7 +633,6 @@ export default function PetitionsPage() {
                 </div>
             )}
 
-            {/* DELETE MODAL */}
             {isDeleteModalOpen && deletingPetition && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[2px]" onClick={() => setIsDeleteModalOpen(false)}>
                     <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -620,25 +640,21 @@ export default function PetitionsPage() {
                             <div className="w-16 h-16 rounded-full bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center mx-auto mb-4 shadow-inner">
                                 <AlertTriangle size={30} className="text-rose-500" />
                             </div>
-                            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Xác nhận xóa khiếu nại</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Bạn có chắc muốn xóa vĩnh viễn hồ sơ này:</p>
-                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-2 mb-2 truncate px-4 py-2 bg-slate-50 dark:bg-slate-900/50 rounded border border-slate-100 dark:border-slate-700 mx-auto max-w-[90%]">"{deletingPetition.title}"</p>
-                            <p className="text-xs text-rose-500 dark:text-rose-400 mt-2 font-medium">Hành động này không thể hoàn tác!</p>
+                            <h3 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Xác nhận xóa đơn thư</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Hành động này không thể hoàn tác.</p>
                         </div>
                         <div className="px-6 py-4 flex justify-center gap-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700">
-                            <button onClick={() => setIsDeleteModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 hover:text-slate-800 transition-all shadow-sm">Hủy bỏ</button>
-                            <button onClick={handleDelete} className="px-5 py-2.5 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 rounded-lg shadow-sm transition-all focus:ring-4 focus:ring-rose-500/20">Xóa vĩnh viễn</button>
+                            <button onClick={() => setIsDeleteModalOpen(false)} className="px-5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg">Hủy</button>
+                            <button onClick={handleDelete} className="px-5 py-2.5 text-sm font-medium text-white bg-rose-600 hover:bg-rose-700 rounded-lg cursor-pointer">Xóa</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* TOAST NOTIFICATION */}
             {toast && (
-                <div className={`fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border animate-in slide-in-from-top-4 duration-300 ${toast.type === 'error' ? 'bg-rose-50 dark:bg-rose-900/90 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300' : 'bg-emerald-50 dark:bg-emerald-900/90 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'}`}>
-                    {toast.type === 'error' ? <AlertTriangle size={18} className="flex-shrink-0" /> : <CheckCircle2 size={18} className="flex-shrink-0" />}
+                <div className={`fixed top-6 right-6 z-[200] flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border animate-in slide-in-from-top-4 duration-300 ${toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                    {toast.type === 'error' ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
                     <span className="text-sm font-medium">{toast.message}</span>
-                    <button onClick={() => setToast(null)} className="ml-3 p-1 rounded-md opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-all"><X size={15} /></button>
                 </div>
             )}
         </div>
