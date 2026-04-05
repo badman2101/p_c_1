@@ -20,7 +20,7 @@ function LoginPage() {
   const onSubmit = async data => {
     try {
       const response = await loginApi.login(data)
-      if (response.status_code === 200 && response.info.role !== "user") {
+      if (response.status_code === 200 ) {
         notification.success({
           message: 'Đăng nhập thành công',
           description: 'Chào mừng quay trở lại hệ thống.',

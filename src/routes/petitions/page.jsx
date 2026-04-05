@@ -53,9 +53,24 @@ export default function PetitionsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(5);
 
+    const [currentUser, setCurrentUser] = useState(null);
+
     const fetchData = async () => {
         try {
             setIsLoading(true);
+            
+            // Lấy thông tin user hiện tại
+            const token = localStorage.getItem('token');
+            let loggedInUser = null;
+            if (token) {
+                try {
+                    loggedInUser = JSON.parse(token);
+                    setCurrentUser(loggedInUser);
+                } catch (e) {
+                    console.error("Lỗi parse token", e);
+                }
+            }
+
             const [petitionsData, usersData] = await Promise.all([
                 complainsApi.getComplains(),
                 userApi.getUsers()
@@ -72,6 +87,14 @@ export default function PetitionsPage() {
             else if (Array.isArray(petitionsData?.data)) finalPetitions = petitionsData.data;
             else if (Array.isArray(petitionsData?.complains)) finalPetitions = petitionsData.complains;
             else if (petitionsData?.data?.data && Array.isArray(petitionsData.data.data)) finalPetitions = petitionsData.data.data;
+
+            // Phân quyền hiển thị
+            if (loggedInUser && loggedInUser.role === 'user') {
+                finalPetitions = finalPetitions.filter(p => {
+                    const assignedId = typeof p.assigned_to === 'object' && p.assigned_to !== null ? p.assigned_to.id : p.assigned_to;
+                    return String(assignedId) === String(loggedInUser.id);
+                });
+            }
 
             setPetitions(finalPetitions);
             setUsers(finalUsers);
@@ -251,9 +274,11 @@ export default function PetitionsPage() {
                     <button onClick={handlePrint} className="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors">
                         <Printer size={17} /> In danh sách
                     </button>
-                    <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-medium text-sm shadow-sm transition-colors">
-                        <Plus size={17} /> Thêm khiếu nại
-                    </button>
+                    {(!currentUser || currentUser.role !== 'user') && (
+                        <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-medium text-sm shadow-sm transition-colors">
+                            <Plus size={17} /> Thêm khiếu nại
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -440,7 +465,9 @@ export default function PetitionsPage() {
                                                 <div className="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => openModal('view', petition)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-md transition-colors" title="Xem"><Eye size={15} /></button>
                                                     <button onClick={() => openModal('edit', petition)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-md transition-colors" title="Sửa"><Edit3 size={15} /></button>
-                                                    <button onClick={() => { setDeletingPetition(petition); setIsDeleteModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-md transition-colors" title="Xóa"><Trash2 size={15} /></button>
+                                                    {(!currentUser || currentUser.role !== 'user') && (
+                                                        <button onClick={() => { setDeletingPetition(petition); setIsDeleteModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-md transition-colors" title="Xóa"><Trash2 size={15} /></button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -572,7 +599,7 @@ export default function PetitionsPage() {
                                         <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Phân công người giải quyết</label>
                                         <div className="relative">
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={16} /></div>
-                                            <select disabled={modalMode === 'view'} value={(typeof currentPetition?.assigned_to === 'object' ? currentPetition?.assigned_to?.id : currentPetition?.assigned_to) || ''} onChange={e => setCurrentPetition({...currentPetition, assigned_to: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
+                                            <select disabled={modalMode === 'view' || (currentUser && currentUser.role === 'user')} value={(typeof currentPetition?.assigned_to === 'object' ? currentPetition?.assigned_to?.id : currentPetition?.assigned_to) || ''} onChange={e => setCurrentPetition({...currentPetition, assigned_to: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
                                                 <option value="">-- Chưa được phân công (Gửi thẳng ban chuyên trách) --</option>
                                                 {users.map(u => (
                                                     <option key={u.id} value={u.id}>{u.name || `User ${u.id}`}</option>
