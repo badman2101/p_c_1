@@ -23,7 +23,7 @@ function LoginPage() {
       if (response.status_code === 200 && response.info.role !== "user") {
         notification.success({
           message: 'Đăng nhập thành công',
-          description: 'Chào mừng đồng chí quay trở lại hệ thống.',
+          description: 'Chào mừng quay trở lại hệ thống.',
           placement: 'topRight'
         })
         // Save user information to localStorage or sessionStorage

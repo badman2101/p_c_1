@@ -9,6 +9,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
     const { theme, setTheme } = useTheme();
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [user, setUser] = useState(null);
     const modalRef = useRef(null);
 
     const toggleModal = () => {
@@ -23,6 +24,16 @@ export const Header = ({ collapsed, setCollapsed }) => {
 
     useEffect(() => {
         document.addEventListener("mousedown", handleClickOutside);
+        
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                setUser(JSON.parse(token));
+            } catch (e) {
+                console.error("Lỗi get user info", e);
+            }
+        }
+
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
@@ -101,8 +112,8 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 
                 <div className="relative flex items-center gap-x-3" ref={modalRef}>
                     <div className="hidden flex-col items-end md:flex">
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Đại úy Trần A</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Đội trưởng Đội Điều tra</span>
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{user?.name || "Người dùng"}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role === 'super admin' ? 'Super Admin' : user?.role === 'admin' ? 'Admin' : 'Người dùng'}</span>
                     </div>
                     <button
                         className="h-10 w-10 overflow-hidden rounded-full border-2 border-slate-200 hover:border-blue-500 transition-colors dark:border-slate-700 dark:hover:border-blue-500"
@@ -118,8 +129,8 @@ export const Header = ({ collapsed, setCollapsed }) => {
                     {isModalOpen && (
                         <div className="absolute right-0 top-12 mt-2 w-56 rounded-xl border border-slate-100 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-900 animate-in fade-in slide-in-from-top-2 duration-200 z-50">
                             <div className="px-2 py-2 mb-2 border-b border-slate-100 dark:border-slate-800">
-                                <p className="text-sm font-semibold text-slate-900 dark:text-white">Đại úy Trần A</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">tran_a@police.gov.vn</p>
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{user?.name || "Người dùng"}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{user?.email || "Chưa cập nhật email"}</p>
                             </div>
                             <button onClick={() => { setIsModalOpen(false); navigate('/ho_so'); }} className="flex w-full items-center gap-x-2 rounded-lg px-2 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
                                 <User size={16} />
