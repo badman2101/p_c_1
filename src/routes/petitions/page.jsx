@@ -8,6 +8,7 @@ import { Pagination } from '../user/page';
 import { donthuApi } from '../../api/donthuApi';
 import { userApi } from '../../api/userApi';
 
+// Cấu hình hiển thị cho các trạng thái đơn thư (màu sắc, nhãn)
 const STATUS_CONFIG = {
     'Chờ xử lý': { label: 'Chờ xử lý', dot: 'bg-amber-500', badge: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700', bar: 'bg-amber-400' },
     'Đang xử lý': { label: 'Đang xử lý', dot: 'bg-blue-500', badge: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700', bar: 'bg-blue-400' },
@@ -15,12 +16,14 @@ const STATUS_CONFIG = {
     'Từ chối': { label: 'Từ chối', dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600', bar: 'bg-slate-400' },
 };
 
+// Hàm kiểm tra xem đơn thư có bị quá hạn xử lý hay không
 function checkIfOverdue(han_xu_ly, status) {
     if (!han_xu_ly || status === 'Đã giải quyết' || status === 'Từ chối') return false;
     return new Date(han_xu_ly) < new Date(new Date().setHours(0, 0, 0, 0));
 }
 
 export default function PetitionsPage() {
+    // Khởi tạo các state cho dữ liệu, bộ lọc, modal và phân trang
     const today = new Date().toISOString().split('T')[0];
     const printRef = useRef(null);
 
@@ -56,6 +59,7 @@ export default function PetitionsPage() {
 
     const [currentUser, setCurrentUser] = useState(null);
 
+    // Hàm lấy dữ liệu đơn thư và danh sách người dùng từ API
     const fetchData = async () => {
         try {
             setIsLoading(true);
@@ -111,6 +115,7 @@ export default function PetitionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Logic lọc danh sách đơn thư dựa trên từ khóa tìm kiếm, trạng thái, người thụ lý và ngày tháng
     const filteredPetitions = useMemo(() => {
         const q = searchQuery.toLowerCase();
         return petitions.filter(p => {
@@ -141,6 +146,7 @@ export default function PetitionsPage() {
         return filteredPetitions.slice(start, start + pageSize);
     }, [filteredPetitions, currentPage, pageSize]);
 
+    // Tính toán số liệu thống kê tổng quát (tổng đơn, đang xử lý, quá hạn, hoàn thành)
     const stats = useMemo(() => {
         const s = { total: petitions.length, 'Chờ xử lý': 0, 'Đang xử lý': 0, 'Đã giải quyết': 0, 'Từ chối': 0, overdue: 0 };
         petitions.forEach(p => { 
@@ -151,6 +157,7 @@ export default function PetitionsPage() {
         return s;
     }, [petitions]);
 
+    // Chuẩn bị dữ liệu cho biểu đồ thống kê theo tháng
     const monthData = useMemo(() => {
         const currentMonth = new Date().getMonth() + 1;
         const data = [];
@@ -192,6 +199,7 @@ export default function PetitionsPage() {
     
     const closeModal = () => { setIsModalOpen(false); setCurrentPetition(null); };
     
+    // Xử lý lưu đơn thư (thêm mới hoặc cập nhật thông tin)
     const handleSave = async (e) => { 
         e.preventDefault(); 
         setIsSaving(true);
@@ -228,6 +236,7 @@ export default function PetitionsPage() {
         }
     };
     
+    // Xử lý xóa đơn thư
     const handleDelete = async () => { 
         if (!deletingPetition) return;
         try {
@@ -245,6 +254,7 @@ export default function PetitionsPage() {
     
     const hasActiveFilter = searchQuery || statusFilter !== 'All' || assigneeFilter !== 'All' || dateFrom || dateTo;
 
+    // Logic in danh sách đơn thư ra bản cứng
     const handlePrint = () => {
         const content = printRef.current.innerHTML;
         const win = window.open('', '_blank', 'width=900,height=700');
@@ -268,6 +278,7 @@ export default function PetitionsPage() {
 
     return (
         <div className="flex flex-col gap-5 w-full pb-10">
+            {/* Phần tiêu đề và các nút thao tác chính (Thống kê, In, Thêm mới) */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
                     <h1 className="text-2xl font-semibold text-slate-800 dark:text-white flex items-center gap-2">
@@ -290,6 +301,7 @@ export default function PetitionsPage() {
                 </div>
             </div>
 
+            {/* Hàng thẻ thống kê tóm tắt nhanh */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
                     { label: 'Tổng đơn thư',  value: stats.total,                     icon: Database,      color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-900/30',    border: 'border-blue-100 dark:border-blue-800' },
@@ -307,6 +319,7 @@ export default function PetitionsPage() {
                 ))}
             </div>
 
+            {/* Phần hiển thị chi tiết biểu đồ và tỉ lệ trạng thái (nếu bật chế độ thống kê) */}
             {showStats && (
                 <div className="bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div>
@@ -354,6 +367,7 @@ export default function PetitionsPage() {
                 </div>
             )}
 
+            {/* Thanh công cụ tìm kiếm và lọc dữ liệu nâng cao */}
             <div className="bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
                 <div className="flex flex-col xl:flex-row gap-3 items-start xl:items-center">
                     <div className="relative flex-1 min-w-0 w-full">
@@ -408,6 +422,7 @@ export default function PetitionsPage() {
                 </div>
             ) : (
                 <div className="bg-white dark:bg-slate-800/80 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
+                    {/* Bảng hiển thị danh sách đơn thư đã qua bộ lọc và phân trang */}
                     <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
                         <table className="w-full min-w-[1050px] text-left">
                             <thead className="sticky top-0 z-10">
@@ -526,6 +541,7 @@ export default function PetitionsPage() {
                 </table>
             </div>
 
+            {/* Modal Biểu mẫu (Thêm/Sửa/Xem chi tiết) */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[2px]" onClick={closeModal}>
                     <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
@@ -633,6 +649,7 @@ export default function PetitionsPage() {
                 </div>
             )}
 
+            {/* Modal Xác nhận xóa */}
             {isDeleteModalOpen && deletingPetition && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[2px]" onClick={() => setIsDeleteModalOpen(false)}>
                     <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>

@@ -11,6 +11,7 @@ import LoginPage from "./routes/login/page";
 import ProtectedRoute from './components/ProtectedRoute';
 import PetitionsPage from './routes/petitions/page';
 import ProfilePage from './routes/profile/page';
+import AssignmentsPage from './routes/assignments/page';
 
 function App() {
     const router = createBrowserRouter([
@@ -41,6 +42,10 @@ function App() {
                 {
                     path: "/ho_so",
                     element: <ProfilePage />,
+                },
+                {
+                    path: "/phan_cong",
+                    element: <AssignmentsPage />,
                 },
             ],
         },

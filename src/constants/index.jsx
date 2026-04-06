@@ -48,6 +48,11 @@ export const navbarLinks = [
                 icon: Mail,
                 path: "/don_thu",
             },
+            {
+                label: "Phân công",
+                icon: NotepadText,
+                path: "/phan_cong",
+            },
         ],
     },
     // {
