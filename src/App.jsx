@@ -44,7 +44,7 @@ function App() {
                     element: <ProfilePage />,
                 },
                 {
-                    path: "/phan_cong",
+                    path: "/nguon_tin",
                     element: <AssignmentsPage />,
                 },
             ],

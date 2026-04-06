@@ -189,6 +189,7 @@ export default function PetitionsPage() {
                 noi_dung_don: '',
                 can_bo_thu_ly: '',
                 ket_qua_xu_ly: '',
+                kho_khan: '',
                 ngay_tiep_nhan: today,
                 han_xu_ly: '',
                 trang_thai: 'Chờ xử lý'
@@ -213,6 +214,7 @@ export default function PetitionsPage() {
                 noi_dung_don: currentPetition.noi_dung_don,
                 can_bo_thu_ly: currentPetition.can_bo_thu_ly || null,
                 ket_qua_xu_ly: currentPetition.ket_qua_xu_ly || '',
+                kho_khan: currentPetition.kho_khan || '',
                 ngay_tiep_nhan: currentPetition.ngay_tiep_nhan || today,
                 han_xu_ly: currentPetition.han_xu_ly || null,
                 trang_thai: currentPetition.trang_thai || 'Chờ xử lý',
@@ -486,8 +488,13 @@ export default function PetitionsPage() {
                                                     {cfg.label}
                                                 </span>
                                                 {petition.ket_qua_xu_ly && (
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded border border-slate-100 dark:border-slate-700" title={petition.ket_qua_xu_ly}>
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded border border-slate-100 dark:border-slate-700 mb-1" title={petition.ket_qua_xu_ly}>
                                                         <span className="font-semibold text-slate-600 dark:text-slate-300">KQ: </span>{petition.ket_qua_xu_ly}
+                                                    </div>
+                                                )}
+                                                {petition.kho_khan && (
+                                                    <div className="text-xs text-amber-600 dark:text-amber-400 line-clamp-2 bg-amber-50/50 dark:bg-amber-900/20 p-1.5 rounded border border-amber-100/50 dark:border-amber-800/30" title={petition.kho_khan}>
+                                                        <span className="font-semibold">KK: </span>{petition.kho_khan}
                                                     </div>
                                                 )}
                                             </td>
@@ -529,11 +536,11 @@ export default function PetitionsPage() {
                 <p className="subtitle">Ngày in: {new Date().toLocaleDateString('vi-VN')} — Hệ thống quản lý</p>
                 <div className="filter-info">Bộ lọc: {statusFilter}{dateFrom ? ` | Từ: ${dateFrom}` : ''}{dateTo ? ` | Đến: ${dateTo}` : ''}</div>
                 <table>
-                    <thead><tr><th>Mã</th><th>Tiêu đề</th><th>Phân loại</th><th>Người gửi</th><th>Nội dung</th><th>Kết quả xử lý</th><th>Tiếp nhận</th><th>Hạn XL</th><th>Trạng thái</th></tr></thead>
+                    <thead><tr><th>Mã</th><th>Tiêu đề</th><th>Phân loại</th><th>Người gửi</th><th>Nội dung</th><th>Kết quả xử lý</th><th>Khó khăn</th><th>Tiếp nhận</th><th>Hạn XL</th><th>Trạng thái</th></tr></thead>
                     <tbody>
                         {filteredPetitions.map(p => (
                             <tr key={p.id}>
-                                <td>DT-{p.id}</td><td>{p.tieu_de}</td><td>{p.phan_loai}</td><td>{p.information_nguoiguidon}</td><td>{p.noi_dung_don}</td><td>{p.ket_qua_xu_ly}</td>
+                                <td>DT-{p.id}</td><td>{p.tieu_de}</td><td>{p.phan_loai}</td><td>{p.information_nguoiguidon}</td><td>{p.noi_dung_don}</td><td>{p.ket_qua_xu_ly}</td><td>{p.kho_khan}</td>
                                 <td>{p.ngay_tiep_nhan ? p.ngay_tiep_nhan.split('T')[0] : ''}</td><td>{p.han_xu_ly ? p.han_xu_ly.split('T')[0] : ''}</td><td>{p.trang_thai}</td>
                             </tr>
                         ))}
@@ -632,7 +639,29 @@ export default function PetitionsPage() {
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-1">
                                         <ClipboardList size={15} className="text-emerald-500"/> Kết quả xử lý
                                     </label>
-                                    <textarea disabled={modalMode === 'view'} value={currentPetition?.ket_qua_xu_ly || ''} onChange={e => setCurrentPetition({...currentPetition, ket_qua_xu_ly: e.target.value})} className={`${inputCls} resize-none h-20 bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-200/60 dark:border-emerald-800/50 focus:border-emerald-500 focus:ring-emerald-500/20`} placeholder="Kết quả giải quyết hồ sơ..." />
+                                    <select 
+                                        disabled={modalMode === 'view'} 
+                                        value={currentPetition?.ket_qua_xu_ly || ''} 
+                                        onChange={e => setCurrentPetition({...currentPetition, ket_qua_xu_ly: e.target.value})} 
+                                        className={`${inputCls} appearance-none cursor-pointer bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-200/60 dark:border-emerald-800/50 focus:border-emerald-500 focus:ring-emerald-500/20`}
+                                    >
+                                        <option value="">-- Chọn kết quả --</option>
+                                        <option value="Thông báo trả lời">Thông báo trả lời</option>
+                                        <option value="Đưa vào nguồn tin">Đưa vào nguồn tin</option>
+                                        <option value="chuyển đơn vị khác">chuyển đơn vị khác</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-1">
+                                        <AlertTriangle size={15} className="text-amber-500"/> Khó khăn
+                                    </label>
+                                    <textarea 
+                                        disabled={modalMode === 'view'} 
+                                        value={currentPetition?.kho_khan || ''} 
+                                        onChange={e => setCurrentPetition({...currentPetition, kho_khan: e.target.value})} 
+                                        className={`${inputCls} resize-none h-20 bg-amber-50/30 dark:bg-amber-900/10 border-amber-200/60 dark:border-amber-800/50 focus:border-amber-500 focus:ring-amber-500/20`} 
+                                        placeholder="Những khó khăn, vướng mắc trong quá trình xử lý..." 
+                                    />
                                 </div>
                             </form>
                         </div>

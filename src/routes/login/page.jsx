@@ -98,11 +98,11 @@ function LoginPage() {
                     <Mail className="w-5 h-5" />
                   </div>
                   <input
-                    id="email"
-                    type="email"
+                    id="username"
+                    type="text"
                     className="block w-full pl-12 pr-4 py-3.5 bg-slate-950/50 border border-slate-700 text-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all duration-300 placeholder-slate-600 sm:text-sm shadow-inner"
-                    placeholder="name@gmail.com"
-                    {...register('email', { required: true })}
+                    placeholder="Tên đăng nhập"
+                    {...register('username', { required: true })}
                   />
                   {/* Subtle input glow */}
                   <div className="absolute inset-0 -z-10 bg-cyan-500/0 rounded-xl blur-md group-focus-within:bg-cyan-500/10 transition-colors duration-500"></div>

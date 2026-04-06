@@ -49,9 +49,9 @@ export const navbarLinks = [
                 path: "/don_thu",
             },
             {
-                label: "Phân công",
+                label: "Nguồn tin",
                 icon: NotepadText,
-                path: "/phan_cong",
+                path: "/nguon_tin",
             },
         ],
     },
