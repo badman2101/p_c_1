@@ -312,6 +312,25 @@ export default function PetitionsPage() {
         return userName;
     };
 
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '---';
+        if (dateStr.includes('/')) return dateStr;
+        try {
+            const dStr = dateStr.replace(' ', 'T');
+            const dateObj = new Date(dStr);
+            if (!isNaN(dateObj.getTime())) {
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const year = dateObj.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+        } catch(e) {}
+        const cleanDate = dateStr.split('T')[0].split(' ')[0];
+        const parts = cleanDate.split('-');
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        return dateStr;
+    };
+
     const inputCls = "w-full py-2.5 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all disabled:bg-slate-100/50 dark:disabled:bg-slate-800/60 disabled:text-slate-500 disabled:cursor-not-allowed";
 
     return (
@@ -480,9 +499,10 @@ export default function PetitionsPage() {
                                     const cfg = STATUS_CONFIG[petition.trang_thai] || STATUS_CONFIG['Chờ xử lý'];
                                     const assignedName = getUserName(petition.can_bo_thu_ly);
                                     const instructorName = getUserName(petition.can_bo_huong_dan);
+                                    const isMovedToSource = petition.ket_qua_xu_ly === 'Đưa vào nguồn tin';
                                     
                                     return (
-                                        <tr key={petition.id} className={`transition-colors group hover:bg-slate-50/80 dark:hover:bg-slate-700/40 ${isOverdue ? 'bg-rose-50/40 dark:bg-rose-900/10' : ''}`}>
+                                        <tr key={petition.id} className={`transition-colors group hover:bg-slate-50/80 dark:hover:bg-slate-700/40 ${isOverdue && !isMovedToSource ? 'bg-rose-50/40 dark:bg-rose-900/10' : ''} ${isMovedToSource ? 'opacity-60 bg-slate-100/50 dark:bg-slate-800/50 line-through grayscale' : ''}`}>
                                             <td className="py-4 px-5 whitespace-nowrap">
                                                 <div className="flex items-center gap-1.5">
                                                     {isOverdue && <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse flex-shrink-0" />}
@@ -492,11 +512,11 @@ export default function PetitionsPage() {
                                             <td className="py-4 px-5">
                                                 <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{petition.phan_loai || 'Chưa rõ'}</div>
                                                 <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5" title="Ngày tiếp nhận">
-                                                    <Calendar size={11} /> Nhận: {petition.ngay_tiep_nhan ? petition.ngay_tiep_nhan.split('T')[0] : '---'}
+                                                    <Calendar size={11} /> Nhận: {formatDate(petition.ngay_tiep_nhan)}
                                                 </div>
                                                 {petition.han_xu_ly && (
                                                     <div className={`text-xs flex items-center gap-1 mt-0.5 ${isOverdue ? 'text-rose-500 font-semibold' : 'text-amber-600 dark:text-amber-500'}`} title="Hạn xử lý">
-                                                        <Clock size={11} /> Hạn: {petition.han_xu_ly.split('T')[0]}
+                                                        <Clock size={11} /> Hạn: {formatDate(petition.han_xu_ly)}
                                                     </div>
                                                 )}
                                             </td>
@@ -546,9 +566,13 @@ export default function PetitionsPage() {
                                             <td className="py-4 px-5 text-right whitespace-nowrap">
                                                 <div className="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => openModal('view', petition)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-md transition-colors" title="Xem"><Eye size={15} /></button>
-                                                    <button onClick={() => openModal('edit', petition)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-md transition-colors" title="Sửa"><Edit3 size={15} /></button>
-                                                    {(!currentUser || currentUser.role !== 'user') && (
-                                                        <button onClick={() => { setDeletingPetition(petition); setIsDeleteModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-md transition-colors" title="Xóa"><Trash2 size={15} /></button>
+                                                    {!isMovedToSource && (
+                                                        <>
+                                                            <button onClick={() => openModal('edit', petition)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-md transition-colors" title="Sửa"><Edit3 size={15} /></button>
+                                                            {(!currentUser || currentUser.role !== 'user') && (
+                                                                <button onClick={() => { setDeletingPetition(petition); setIsDeleteModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-md transition-colors" title="Xóa"><Trash2 size={15} /></button>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
                                             </td>
@@ -586,7 +610,7 @@ export default function PetitionsPage() {
                         {filteredPetitions.map(p => (
                             <tr key={p.id}>
                                 <td>DT-{p.id}</td><td>{p.tieu_de}</td><td>{p.phan_loai}</td><td>{p.information_nguoiguidon}</td><td>{p.noi_dung_don}</td><td>{p.ket_qua_xu_ly}</td><td>{p.kho_khan}</td>
-                                <td>{p.ngay_tiep_nhan ? p.ngay_tiep_nhan.split('T')[0] : ''}</td><td>{p.han_xu_ly ? p.han_xu_ly.split('T')[0] : ''}</td><td>{p.trang_thai}</td>
+                                <td>{formatDate(p.ngay_tiep_nhan)}</td><td>{formatDate(p.han_xu_ly)}</td><td>{p.trang_thai}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -618,14 +642,14 @@ export default function PetitionsPage() {
                                         <label className={`text-sm font-medium ${dateValidationError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'} block mb-1`}>Ngày tiếp nhận <span className="text-rose-500">*</span></label>
                                         <div className="relative">
                                             <div className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${dateValidationError ? 'text-rose-500' : 'text-slate-400'}`}><Calendar size={16} /></div>
-                                            <input type="date" required disabled={modalMode === 'view'} value={currentPetition?.ngay_tiep_nhan ? currentPetition.ngay_tiep_nhan.split('T')[0] : ''} onChange={e => { setCurrentPetition({...currentPetition, ngay_tiep_nhan: e.target.value}); setDateValidationError(false); }} className={`${inputCls} pl-10 ${dateValidationError ? '!border-rose-500 !ring-2 !ring-rose-500/20' : ''}`} />
+                                            <input type="date" required disabled={modalMode === 'view'} value={currentPetition?.ngay_tiep_nhan ? currentPetition.ngay_tiep_nhan.split('T')[0].split(' ')[0] : ''} onChange={e => { setCurrentPetition({...currentPetition, ngay_tiep_nhan: e.target.value}); setDateValidationError(false); }} className={`${inputCls} pl-10 ${dateValidationError ? '!border-rose-500 !ring-2 !ring-rose-500/20' : ''}`} />
                                         </div>
                                     </div>
                                     <div className="space-y-1.5 md:col-span-1">
                                         <label className={`text-sm font-medium ${dateValidationError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'} block mb-1`}>Hạn chót xử lý (Deadline)</label>
                                         <div className="relative">
                                             <div className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${dateValidationError ? 'text-rose-500' : 'text-slate-400'}`}><Clock size={16} /></div>
-                                            <input type="date" disabled={modalMode === 'view'} value={currentPetition?.han_xu_ly ? currentPetition.han_xu_ly.split('T')[0] : ''} onChange={e => { setCurrentPetition({...currentPetition, han_xu_ly: e.target.value}); setDateValidationError(false); }} className={`${inputCls} pl-10 ${dateValidationError ? '!border-rose-500 !ring-2 !ring-rose-500/20' : ''}`} />
+                                            <input type="date" disabled={modalMode === 'view'} value={currentPetition?.han_xu_ly ? currentPetition.han_xu_ly.split('T')[0].split(' ')[0] : ''} onChange={e => { setCurrentPetition({...currentPetition, han_xu_ly: e.target.value}); setDateValidationError(false); }} className={`${inputCls} pl-10 ${dateValidationError ? '!border-rose-500 !ring-2 !ring-rose-500/20' : ''}`} />
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">

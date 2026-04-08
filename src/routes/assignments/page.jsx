@@ -235,8 +235,21 @@ export default function AssignmentsPage() {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '---';
-        const [year, month, day] = dateStr.split('-');
-        return `${day}/${month}/${year}`;
+        if (dateStr.includes('/')) return dateStr;
+        try {
+            const dStr = dateStr.replace(' ', 'T');
+            const dateObj = new Date(dStr);
+            if (!isNaN(dateObj.getTime())) {
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const year = dateObj.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+        } catch(e) {}
+        const cleanDate = dateStr.split('T')[0].split(' ')[0];
+        const parts = cleanDate.split('-');
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        return dateStr;
     };
 
     const renderResultBadge = (result) => {
@@ -557,7 +570,7 @@ export default function AssignmentsPage() {
                                         <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Ngày phân công <span className="text-rose-500">*</span></label>
                                         <div className="relative">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><Calendar size={18} /></div>
-                                            <input type="date" required disabled={modalMode === 'view'} value={currentAssignment?.ngay_phan_cong || ''} onChange={e => setCurrentAssignment({...currentAssignment, ngay_phan_cong: e.target.value})} className={`${inputCls} pl-12`} />
+                                            <input type="date" required disabled={modalMode === 'view'} value={currentAssignment?.ngay_phan_cong ? currentAssignment.ngay_phan_cong.split('T')[0].split(' ')[0] : ''} onChange={e => setCurrentAssignment({...currentAssignment, ngay_phan_cong: e.target.value})} className={`${inputCls} pl-12`} />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
