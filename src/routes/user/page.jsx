@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { userApi } from '../../api/userApi';
+import { donviApi } from '../../api/donviApi';
 import {
     Users, UserPlus, Shield, Search, Edit3, Trash2, X, Eye,
     Mail, Phone, UserCheck, UserCog, Inbox, AlertTriangle,
-    CheckCircle2, Loader2, ChevronDown, ChevronLeft, ChevronRight
+    CheckCircle2, Loader2, ChevronDown, ChevronLeft, ChevronRight, Building
 } from 'lucide-react';
 
 const ROLE_CONFIG = {
@@ -82,6 +83,9 @@ export default function UserPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState('All');
+    
+    // Đơn vị
+    const [donviList, setDonviList] = useState([]);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -108,7 +112,16 @@ export default function UserPage() {
         catch { showToast('Không thể tải danh sách tài khoản', 'error'); }
         finally { setIsLoading(false); }
     };
-    useEffect(() => { getUsers(); }, []);
+    const getDonviList = async () => {
+        try {
+            const res = await donviApi.getDonvi();
+            // Xử lý res có thể là mảng hoặc có data
+            setDonviList(Array.isArray(res) ? res : res.data || []);
+        } catch (error) {
+            console.error("Không thể tải danh sách đơn vị", error);
+        }
+    };
+    useEffect(() => { getUsers(); getDonviList(); }, []);
 
     // Reset page on filter change
     useEffect(() => { setCurrentPage(1); }, [searchQuery, roleFilter]);
@@ -137,7 +150,7 @@ export default function UserPage() {
 
     const openModal = (mode, user = null) => {
         setModalMode(mode); setFormErrors({});
-        setCurrentUser(mode === 'add' ? { name: '', email: '', username: '', phone: '', password: '', role: 'user' } : { ...user });
+        setCurrentUser(mode === 'add' ? { name: '', email: '', username: '', phone: '', password: '', role: 'user', don_vi: '' } : { ...user });
         setIsModalOpen(true);
     };
     const closeModal = () => { setIsModalOpen(false); setCurrentUser(null); setFormErrors({}); };
@@ -151,6 +164,7 @@ export default function UserPage() {
         if (!currentUser.phone?.trim()) errors.phone = 'Vui lòng nhập số điện thoại';
         if (modalMode === 'add' && !currentUser.password?.trim()) errors.password = 'Vui lòng nhập mật khẩu';
         if (!currentUser.role) errors.role = 'Vui lòng chọn vai trò';
+        if (!currentUser.don_vi) errors.don_vi = 'Vui lòng chọn đơn vị';
         const others = users.filter(u => u.id !== currentUser.id);
         if (others.some(u => u.email === currentUser.email)) errors.email = 'Email đã tồn tại';
         if (others.some(u => u.username === currentUser.username)) errors.username = 'Tên đăng nhập đã tồn tại';
@@ -257,6 +271,7 @@ export default function UserPage() {
                                     <th className="py-3.5 px-5 min-w-[200px]">Người dùng</th>
                                     <th className="py-3.5 px-5 min-w-[180px]">Liên hệ</th>
                                     <th className="py-3.5 px-5 w-[150px]">Tên đăng nhập</th>
+                                    <th className="py-3.5 px-5 min-w-[160px]">Đơn vị</th>
                                     <th className="py-3.5 px-5 w-[140px]">Vai trò</th>
                                     <th className="py-3.5 px-5 text-right w-[120px]">Thao tác</th>
                                 </tr>
@@ -290,6 +305,14 @@ export default function UserPage() {
                                             </td>
                                             <td className="py-4 px-5">
                                                 <code className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/60 px-2 py-0.5 rounded font-mono border border-slate-100 dark:border-slate-600">{user.username}</code>
+                                            </td>
+                                            <td className="py-4 px-5">
+                                                <div className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-200">
+                                                    <Building size={14} className="text-slate-400 flex-shrink-0" />
+                                                    <span className="truncate max-w-[160px]" title={donviList.find(d => d.id == user.don_vi)?.ten_don_vi || donviList.find(d => d.id == user.don_vi)?.name || 'Chưa phân bổ'}>
+                                                        {donviList.find(d => d.id == user.don_vi)?.ten_don_vi || donviList.find(d => d.id == user.don_vi)?.name || <span className="text-slate-400 italic text-xs">Chưa phân bổ</span>}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td className="py-4 px-5">
                                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-transparent ${rc.bg} ${rc.text}`}>
@@ -409,6 +432,30 @@ export default function UserPage() {
                                                     <option value="user">Người dùng</option>
                                                 </select>
                                                 <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                                {formErrors.role && <p className="text-xs text-rose-500 mt-1.5">{formErrors.role}</p>}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="space-y-1.5 break-inside-avoid">
+                                        <label className="text-sm font-medium text-slate-600 dark:text-slate-300">Đơn vị <span className="text-rose-500">*</span></label>
+                                        {modalMode === 'view' ? (
+                                            <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-700/60 rounded-lg text-sm text-slate-700 dark:text-slate-200">
+                                                <Building size={15} className="text-slate-400" />
+                                                {donviList.find(d => d.id === currentUser.don_vi)?.ten_don_vi || 
+                                                 donviList.find(d => d.id === currentUser.don_vi)?.name || 
+                                                 'Chưa có đơn vị'}
+                                            </div>
+                                        ) : (
+                                            <div className="relative">
+                                                <select value={currentUser.don_vi || ''} onChange={e => updateField('don_vi', e.target.value === '' ? '' : Number(e.target.value))} className={inputCls(!!formErrors.don_vi) + ' appearance-none cursor-pointer'}>
+                                                    <option value="" disabled hidden>Chọn đơn vị</option>
+                                                    {donviList.map(dv => (
+                                                        <option key={dv.id} value={dv.id}>{dv.ten_don_vi || dv.name}</option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                                {formErrors.don_vi && <p className="text-xs text-rose-500 mt-1.5">{formErrors.don_vi}</p>}
                                             </div>
                                         )}
                                     </div>
