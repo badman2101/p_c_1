@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Plus, Search, Edit3, Trash2, Eye, X, Filter, AlertTriangle,
     CheckCircle2, Clock, Inbox, Calendar, FileText, Printer,
-    BarChart2, RefreshCw, TrendingUp, User, Tag, Type, MessageSquare, ClipboardList, PenTool, Database, Globe
+    BarChart2, RefreshCw, TrendingUp, User, UserCheck, Tag, Type, MessageSquare, ClipboardList, PenTool, Database, Globe
 } from 'lucide-react';
 import { Pagination } from '../user/page';
 import { donthuApi } from '../../api/donthuApi';
 import { userApi } from '../../api/userApi';
+import { donviApi } from '../../api/donviApi';
 
 // Cấu hình hiển thị cho các trạng thái đơn thư (màu sắc, nhãn)
 const STATUS_CONFIG = {
@@ -29,6 +30,7 @@ export default function PetitionsPage() {
 
     const [petitions, setPetitions] = useState([]);
     const [users, setUsers] = useState([]);
+    const [donviList, setDonviList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     
     // Filters
@@ -44,6 +46,7 @@ export default function PetitionsPage() {
     const [modalMode, setModalMode] = useState('add');
     const [currentPetition, setCurrentPetition] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [dateValidationError, setDateValidationError] = useState(false);
 
     // Delete Modal
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -75,10 +78,16 @@ export default function PetitionsPage() {
                 }
             }
 
-            const [petitionsData, usersData] = await Promise.all([
+            const [petitionsData, usersData, donviData] = await Promise.all([
                 donthuApi.getDonThus(),
-                userApi.getUsers()
+                userApi.getUsers(),
+                donviApi.getDonvi()
             ]);
+            
+            let finalDonvi = [];
+            if (Array.isArray(donviData)) finalDonvi = donviData;
+            else if (Array.isArray(donviData?.data)) finalDonvi = donviData.data;
+            setDonviList(finalDonvi);
             
             let finalUsers = [];
             if (Array.isArray(usersData)) finalUsers = usersData;
@@ -178,6 +187,7 @@ export default function PetitionsPage() {
 
     const openModal = (mode, petition = null) => {
         setModalMode(mode);
+        setDateValidationError(false);
         if (petition) {
             setCurrentPetition({ ...petition });
         } else {
@@ -192,17 +202,34 @@ export default function PetitionsPage() {
                 kho_khan: '',
                 ngay_tiep_nhan: today,
                 han_xu_ly: '',
-                trang_thai: 'Chờ xử lý'
+                trang_thai: 'Chờ xử lý',
+                can_bo_huong_dan: ''
             });
         }
         setIsModalOpen(true);
     };
     
-    const closeModal = () => { setIsModalOpen(false); setCurrentPetition(null); };
+    const closeModal = () => { setIsModalOpen(false); setCurrentPetition(null); setDateValidationError(false); };
     
     // Xử lý lưu đơn thư (thêm mới hoặc cập nhật thông tin)
     const handleSave = async (e) => { 
         e.preventDefault(); 
+        setDateValidationError(false);
+
+        if (currentPetition.han_xu_ly && currentPetition.ngay_tiep_nhan) {
+            const deadline = new Date(currentPetition.han_xu_ly);
+            const receivedDate = new Date(currentPetition.ngay_tiep_nhan);
+            
+            deadline.setHours(0, 0, 0, 0);
+            receivedDate.setHours(0, 0, 0, 0);
+
+            if (deadline <= receivedDate) {
+                setDateValidationError(true);
+                showToast('Hạn xử lý (deadline) phải lớn hơn Ngày tiếp nhận!', 'error');
+                return;
+            }
+        }
+
         setIsSaving(true);
         
         try {
@@ -218,6 +245,7 @@ export default function PetitionsPage() {
                 ngay_tiep_nhan: currentPetition.ngay_tiep_nhan || today,
                 han_xu_ly: currentPetition.han_xu_ly || null,
                 trang_thai: currentPetition.trang_thai || 'Chờ xử lý',
+                can_bo_huong_dan: currentPetition.can_bo_huong_dan || null,
             };
 
             if (modalMode === 'add') { 
@@ -266,14 +294,22 @@ export default function PetitionsPage() {
     };
 
     const getUserName = (assignedToValue) => {
-        if (!assignedToValue) return;
+        if (!assignedToValue) return null;
         let idToCheck = assignedToValue;
         if (typeof assignedToValue === 'object' && assignedToValue !== null) {
-            if (assignedToValue.name) return assignedToValue.name;
             idToCheck = assignedToValue.id;
         }
         const user = users.find(u => String(u.id) === String(idToCheck));
-        return user ? user.name : `ID: ${idToCheck}`;
+        if (!user) return `ID: ${idToCheck}`;
+        
+        let userName = user.name;
+        if (user.don_vi) {
+            const donvi = donviList.find(d => String(d.id) === String(user.don_vi));
+            if (donvi) {
+                userName += ` - ${donvi.ten_don_vi || donvi.name}`;
+            }
+        }
+        return userName;
     };
 
     const inputCls = "w-full py-2.5 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all disabled:bg-slate-100/50 dark:disabled:bg-slate-800/60 disabled:text-slate-500 disabled:cursor-not-allowed";
@@ -443,6 +479,7 @@ export default function PetitionsPage() {
                                     const isOverdue = checkIfOverdue(petition.han_xu_ly, petition.trang_thai);
                                     const cfg = STATUS_CONFIG[petition.trang_thai] || STATUS_CONFIG['Chờ xử lý'];
                                     const assignedName = getUserName(petition.can_bo_thu_ly);
+                                    const instructorName = getUserName(petition.can_bo_huong_dan);
                                     
                                     return (
                                         <tr key={petition.id} className={`transition-colors group hover:bg-slate-50/80 dark:hover:bg-slate-700/40 ${isOverdue ? 'bg-rose-50/40 dark:bg-rose-900/10' : ''}`}>
@@ -475,11 +512,19 @@ export default function PetitionsPage() {
                                                 {isOverdue && <span className="mt-1 text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/40 px-1.5 py-0.5 rounded text-[10px] font-semibold inline-block">Quá hạn xử lý</span>}
                                             </td>
                                             <td className="py-4 px-5">
-                                                <div className="flex items-center gap-1.5 text-sm">
-                                                    <User size={13} className="text-slate-400" />
-                                                    <span className={`truncate ${assignedName ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 italic'}`}>
-                                                        {assignedName || 'Chưa phân công'}
-                                                    </span>
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="flex items-center gap-1.5 text-sm" title="Người phân công">
+                                                        <User size={13} className="text-blue-500 flex-shrink-0" />
+                                                        <span className={`truncate ${assignedName ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 italic'}`}>
+                                                            {assignedName || 'Chưa phân công'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-sm" title="Người hướng dẫn">
+                                                        <UserCheck size={13} className="text-emerald-500 flex-shrink-0" />
+                                                        <span className={`truncate ${instructorName ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 italic'}`}>
+                                                            {instructorName || 'Chưa HD'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5">
@@ -570,17 +615,17 @@ export default function PetitionsPage() {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     <div className="space-y-1.5 md:col-span-1">
-                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Ngày tiếp nhận <span className="text-rose-500">*</span></label>
+                                        <label className={`text-sm font-medium ${dateValidationError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'} block mb-1`}>Ngày tiếp nhận <span className="text-rose-500">*</span></label>
                                         <div className="relative">
-                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Calendar size={16} /></div>
-                                            <input type="date" required disabled={modalMode === 'view'} value={currentPetition?.ngay_tiep_nhan ? currentPetition.ngay_tiep_nhan.split('T')[0] : ''} onChange={e => setCurrentPetition({...currentPetition, ngay_tiep_nhan: e.target.value})} className={`${inputCls} pl-10`} />
+                                            <div className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${dateValidationError ? 'text-rose-500' : 'text-slate-400'}`}><Calendar size={16} /></div>
+                                            <input type="date" required disabled={modalMode === 'view'} value={currentPetition?.ngay_tiep_nhan ? currentPetition.ngay_tiep_nhan.split('T')[0] : ''} onChange={e => { setCurrentPetition({...currentPetition, ngay_tiep_nhan: e.target.value}); setDateValidationError(false); }} className={`${inputCls} pl-10 ${dateValidationError ? '!border-rose-500 !ring-2 !ring-rose-500/20' : ''}`} />
                                         </div>
                                     </div>
                                     <div className="space-y-1.5 md:col-span-1">
-                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Hạn chót xử lý (Deadline)</label>
+                                        <label className={`text-sm font-medium ${dateValidationError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'} block mb-1`}>Hạn chót xử lý (Deadline)</label>
                                         <div className="relative">
-                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Clock size={16} /></div>
-                                            <input type="date" disabled={modalMode === 'view'} value={currentPetition?.han_xu_ly ? currentPetition.han_xu_ly.split('T')[0] : ''} onChange={e => setCurrentPetition({...currentPetition, han_xu_ly: e.target.value})} className={`${inputCls} pl-10`} />
+                                            <div className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${dateValidationError ? 'text-rose-500' : 'text-slate-400'}`}><Clock size={16} /></div>
+                                            <input type="date" disabled={modalMode === 'view'} value={currentPetition?.han_xu_ly ? currentPetition.han_xu_ly.split('T')[0] : ''} onChange={e => { setCurrentPetition({...currentPetition, han_xu_ly: e.target.value}); setDateValidationError(false); }} className={`${inputCls} pl-10 ${dateValidationError ? '!border-rose-500 !ring-2 !ring-rose-500/20' : ''}`} />
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
@@ -609,12 +654,22 @@ export default function PetitionsPage() {
                                             <input type="text" required disabled={modalMode === 'view'} value={currentPetition?.information_nguoiguidon || ''} onChange={e => setCurrentPetition({...currentPetition, information_nguoiguidon: e.target.value})} className={`${inputCls} pl-10`} placeholder="Họ tên, SĐT, Địa chỉ người gửi đơn..." />
                                         </div>
                                     </div>
-                                    <div className="space-y-1.5 md:col-span-2">
+                                    <div className="space-y-1.5 md:col-span-1">
                                         <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Cán bộ thụ lý</label>
                                         <div className="relative">
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={16} /></div>
                                             <select disabled={modalMode === 'view' || (currentUser && currentUser.role === 'user')} value={(typeof currentPetition?.can_bo_thu_ly === 'object' ? currentPetition?.can_bo_thu_ly?.id : currentPetition?.can_bo_thu_ly) || ''} onChange={e => setCurrentPetition({...currentPetition, can_bo_thu_ly: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
                                                 <option value="">-- Chưa được phân công --</option>
+                                                {users.map(u => <option key={u.id} value={u.id}>{u.name || `User ${u.id}`}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5 md:col-span-1">
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Người hướng dẫn</label>
+                                        <div className="relative">
+                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={16} /></div>
+                                            <select disabled={modalMode === 'view' || (currentUser && currentUser.role === 'user')} value={(typeof currentPetition?.can_bo_huong_dan === 'object' ? currentPetition?.can_bo_huong_dan?.id : currentPetition?.can_bo_huong_dan) || ''} onChange={e => setCurrentPetition({...currentPetition, can_bo_huong_dan: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
+                                                <option value="">-- Chưa có hướng dẫn --</option>
                                                 {users.map(u => <option key={u.id} value={u.id}>{u.name || `User ${u.id}`}</option>)}
                                             </select>
                                         </div>

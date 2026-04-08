@@ -2,17 +2,19 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     Plus, Search, Edit3, Trash2, Eye, X, Filter, AlertTriangle,
     CheckCircle2, Clock, Inbox, Calendar, FileText, RefreshCw,
-    User, MessageSquare, ClipboardList, Database, LayoutGrid, List
+    User, UserCheck, MessageSquare, ClipboardList, Database, LayoutGrid, List
 } from 'lucide-react';
 import { Pagination } from '../user/page';
 import { assignmentApi } from '../../api/assignmentApi';
 import { userApi } from '../../api/userApi';
+import { donviApi } from '../../api/donviApi';
 
 export default function AssignmentsPage() {
     const today = new Date().toISOString().split('T')[0];
 
     const [assignments, setAssignments] = useState([]);
     const [users, setUsers] = useState([]);
+    const [donviList, setDonviList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     
     // Filters
@@ -74,21 +76,29 @@ export default function AssignmentsPage() {
         }
     };
 
-    const fetchUsers = async () => {
+    const fetchUsersAndDonvi = async () => {
         try {
-            const data = await userApi.getUsers();
+            const [userData, donviData] = await Promise.all([
+                userApi.getUsers(),
+                donviApi.getDonvi()
+            ]);
             let finalUsers = [];
-            if (Array.isArray(data)) finalUsers = data;
-            else if (Array.isArray(data?.data)) finalUsers = data.data;
-            else if (Array.isArray(data?.users)) finalUsers = data.users;
+            if (Array.isArray(userData)) finalUsers = userData;
+            else if (Array.isArray(userData?.data)) finalUsers = userData.data;
+            else if (Array.isArray(userData?.users)) finalUsers = userData.users;
             setUsers(finalUsers);
+
+            let finalDonvi = [];
+            if (Array.isArray(donviData)) finalDonvi = donviData;
+            else if (Array.isArray(donviData?.data)) finalDonvi = donviData.data;
+            setDonviList(finalDonvi);
         } catch (error) {
-            console.error('Lỗi khi tải người dùng:', error);
+            console.error('Lỗi khi tải người dùng/đơn vị:', error);
         }
     };
 
     useEffect(() => {
-        fetchUsers();
+        fetchUsersAndDonvi();
     }, []);
 
     useEffect(() => {
@@ -141,6 +151,7 @@ export default function AssignmentsPage() {
                 ngay_phan_cong: today,
                 noi_dung: '',
                 dieu_tra_vien: '',
+                can_bo_huong_dan: '',
                 ket_qua: ''
             });
         }
@@ -161,6 +172,7 @@ export default function AssignmentsPage() {
                 ngay_phan_cong: currentAssignment.ngay_phan_cong,
                 noi_dung: currentAssignment.noi_dung,
                 dieu_tra_vien: currentAssignment.dieu_tra_vien,
+                can_bo_huong_dan: currentAssignment.can_bo_huong_dan,
                 ket_qua: currentAssignment.ket_qua,
             };
 
@@ -209,7 +221,16 @@ export default function AssignmentsPage() {
     const getInvestigatorName = (idOrName) => {
         if (!idOrName) return '---';
         const user = users.find(u => String(u.id) === String(idOrName) || u.name === idOrName);
-        return user ? user.name : idOrName;
+        if (!user) return idOrName;
+        
+        let userName = user.name;
+        if (user.don_vi) {
+            const donvi = donviList.find(d => String(d.id) === String(user.don_vi));
+            if (donvi) {
+                userName += ` - ${donvi.ten_don_vi || donvi.name}`;
+            }
+        }
+        return userName;
     };
 
     const formatDate = (dateStr) => {
@@ -400,11 +421,19 @@ export default function AssignmentsPage() {
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
-                                                            <User size={14} />
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="flex items-center gap-2" title="Điều tra viên">
+                                                            <div className="w-6 h-6 rounded-full bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0">
+                                                                <User size={12} />
+                                                            </div>
+                                                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{getInvestigatorName(item.dieu_tra_vien) || 'Chưa phân công'}</span>
                                                         </div>
-                                                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{getInvestigatorName(item.dieu_tra_vien)}</span>
+                                                        <div className="flex items-center gap-2" title="Người hướng dẫn">
+                                                            <div className="w-6 h-6 rounded-full bg-emerald-50 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                                                                <UserCheck size={12} />
+                                                            </div>
+                                                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{getInvestigatorName(item.can_bo_huong_dan) || 'Chưa HD'}</span>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6">
@@ -445,11 +474,18 @@ export default function AssignmentsPage() {
                                         <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
                                             #{item.id}
                                         </div>
-                                        <div className="flex flex-col">
+                                        <div className="flex flex-col gap-0.5 min-w-0">
                                             <span className="text-xs font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 uppercase tracking-wider">
                                                 <Calendar size={12} /> {formatDate(item.ngay_phan_cong)}
                                             </span>
-                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200 mt-0.5">{getInvestigatorName(item.dieu_tra_vien)}</span>
+                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={`Phân công: ${getInvestigatorName(item.dieu_tra_vien)}`}>
+                                                <User size={13} className="inline mr-1 text-blue-500" />{getInvestigatorName(item.dieu_tra_vien)}
+                                            </span>
+                                            {item.can_bo_huong_dan && (
+                                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate" title={`Hướng dẫn: ${getInvestigatorName(item.can_bo_huong_dan)}`}>
+                                                    <UserCheck size={13} className="inline mr-1 text-emerald-500" />{getInvestigatorName(item.can_bo_huong_dan)}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     
@@ -537,6 +573,21 @@ export default function AssignmentsPage() {
                                             >
                                                 <option value="" disabled>-- Chọn cán bộ thụ lý --</option>
                                                 {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Người hướng dẫn</label>
+                                        <div className="relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><User size={18} /></div>
+                                            <select 
+                                                disabled={modalMode === 'view'} 
+                                                value={(typeof currentAssignment?.can_bo_huong_dan === 'object' ? currentAssignment?.can_bo_huong_dan?.id : currentAssignment?.can_bo_huong_dan) || ''} 
+                                                onChange={e => setCurrentAssignment({...currentAssignment, can_bo_huong_dan: e.target.value})} 
+                                                className={`${inputCls} pl-12 appearance-none cursor-pointer`}
+                                            >
+                                                <option value="">-- Chưa có hướng dẫn --</option>
+                                                {users.map(u => <option key={u.id} value={u.id}>{u.name || `User ${u.id}`}</option>)}
                                             </select>
                                         </div>
                                     </div>
