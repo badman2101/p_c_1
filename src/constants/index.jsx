@@ -1,4 +1,4 @@
-import { ChartColumn, FileQuestion, Home, NotepadText, Package, PackagePlus, Settings, ShoppingBag, UserCheck, UserPlus, Users, Mail } from "lucide-react";
+import { ChartColumn, FileQuestion, Home, NotepadText, Package, PackagePlus, Settings, ShoppingBag, UserCheck, UserPlus, Users, Mail, Briefcase } from "lucide-react";
 
 import ProfileImage from "@/assets/profile-image.jpg";
 import ProductImage from "@/assets/product-image.jpg";
@@ -52,6 +52,11 @@ export const navbarLinks = [
                 label: "Nguồn tin",
                 icon: NotepadText,
                 path: "/nguon_tin",
+            },
+            {
+                label: "Vụ án",
+                icon: Briefcase,
+                path: "/vu_an",
             },
         ],
     },

@@ -16,6 +16,8 @@ export default function AssignmentsPage() {
     const [users, setUsers] = useState([]);
     const [donviList, setDonviList] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState(null);
+    const isAdmin = !currentUser || currentUser.role === 'admin' || currentUser.role === 'super_admin';
     
     // Filters
     const [searchQuery, setSearchQuery] = useState('');
@@ -47,24 +49,38 @@ export default function AssignmentsPage() {
     const [pageSize, setPageSize] = useState(10);
     const [totalItems, setTotalItems] = useState(0);
 
-    const fetchAssignments = async () => {
+    const fetchAssignments = async (loggedInUser) => {
         try {
             setIsLoading(true);
             const response = await assignmentApi.getAssignments();
             
             // Handle different possible API response structures
             let data = [];
-            let total = 0;
             
             if (response?.data && Array.isArray(response.data)) {
                 data = response.data;
-                total = response.total || response.data.length;
             } else if (Array.isArray(response)) {
                 data = response;
-                total = response.length;
             } else if (response?.assignments) {
                 data = response.assignments;
-                total = response.total || data.length;
+            }
+
+            // Phân quyền: user thường chỉ xem phân công được giao cho mình
+            const user = loggedInUser ?? currentUser;
+            if (user && user.role !== 'admin' && user.role !== 'super_admin') {
+                data = data.filter(item => {
+                    const dieuTraVienId = typeof item.dieu_tra_vien === 'object' && item.dieu_tra_vien !== null
+                        ? item.dieu_tra_vien.id
+                        : item.dieu_tra_vien;
+                    const huongDanId = typeof item.can_bo_huong_dan === 'object' && item.can_bo_huong_dan !== null
+                        ? item.can_bo_huong_dan.id
+                        : item.can_bo_huong_dan;
+                    // Match by name or ID (assignments may store name string)
+                    return String(dieuTraVienId) === String(user.id)
+                        || dieuTraVienId === user.name
+                        || String(huongDanId) === String(user.id)
+                        || huongDanId === user.name;
+                });
             }
             
             setAssignments(data);
@@ -78,6 +94,18 @@ export default function AssignmentsPage() {
 
     const fetchUsersAndDonvi = async () => {
         try {
+            // Lấy thông tin user đang đăng nhập từ localStorage
+            const token = localStorage.getItem('token');
+            let loggedInUser = null;
+            if (token) {
+                try {
+                    loggedInUser = JSON.parse(token);
+                    setCurrentUser(loggedInUser);
+                } catch (e) {
+                    console.error('Lỗi parse token', e);
+                }
+            }
+
             const [userData, donviData] = await Promise.all([
                 userApi.getUsers(),
                 donviApi.getDonvi()
@@ -92,6 +120,9 @@ export default function AssignmentsPage() {
             if (Array.isArray(donviData)) finalDonvi = donviData;
             else if (Array.isArray(donviData?.data)) finalDonvi = donviData.data;
             setDonviList(finalDonvi);
+
+            // Fetch assignments sau khi có thông tin user để áp dụng phân quyền
+            await fetchAssignments(loggedInUser);
         } catch (error) {
             console.error('Lỗi khi tải người dùng/đơn vị:', error);
         }
@@ -99,10 +130,7 @@ export default function AssignmentsPage() {
 
     useEffect(() => {
         fetchUsersAndDonvi();
-    }, []);
-
-    useEffect(() => {
-        fetchAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Filtered and paginated assignments
@@ -299,9 +327,11 @@ export default function AssignmentsPage() {
                             <LayoutGrid size={18} />
                         </button>
                     </div>
-                    <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-semibold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-95">
-                        <Plus size={18} /> Thêm phân công
-                    </button>
+                    {isAdmin && (
+                        <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-semibold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-95">
+                            <Plus size={18} /> Thêm phân công
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -343,17 +373,19 @@ export default function AssignmentsPage() {
                         />
                     </div>
                     <div className="flex flex-wrap gap-2 items-center w-full lg:w-auto">
-                        <div className="relative">
-                            <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                            <select 
-                                value={investigatorFilter} 
-                                onChange={e => setInvestigatorFilter(e.target.value)}
-                                className="pl-8 pr-8 py-2.5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 appearance-none cursor-pointer min-w-[150px]"
-                            >
-                                <option value="All">Tất cả cán bộ</option>
-                                {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
-                            </select>
-                        </div>
+                        {isAdmin && (
+                            <div className="relative">
+                                <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                <select 
+                                    value={investigatorFilter} 
+                                    onChange={e => setInvestigatorFilter(e.target.value)}
+                                    className="pl-8 pr-8 py-2.5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 appearance-none cursor-pointer min-w-[150px]"
+                                >
+                                    <option value="All">Tất cả cán bộ</option>
+                                    {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                                </select>
+                            </div>
+                        )}
                         <div className="relative">
                             <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                             <select 
@@ -456,7 +488,9 @@ export default function AssignmentsPage() {
                                                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
                                                         <button onClick={() => openModal('view', item)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg transition-colors"><Eye size={17} /></button>
                                                         <button onClick={() => openModal('edit', item)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-lg transition-colors"><Edit3 size={17} /></button>
-                                                        <button onClick={() => { setDeletingAssignment(item); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-lg transition-colors"><Trash2 size={17} /></button>
+                                                        {isAdmin && (
+                                                            <button onClick={() => { setDeletingAssignment(item); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-lg transition-colors"><Trash2 size={17} /></button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -517,7 +551,9 @@ export default function AssignmentsPage() {
                                     <div className="pt-4 mt-auto border-t border-slate-100 dark:border-slate-700/50 flex justify-end gap-2">
                                         <button onClick={() => openModal('view', item)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-xl transition-all"><Eye size={18} /></button>
                                         <button onClick={() => openModal('edit', item)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-xl transition-all"><Edit3 size={18} /></button>
-                                        <button onClick={() => { setDeletingAssignment(item); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-xl transition-all"><Trash2 size={18} /></button>
+                                        {isAdmin && (
+                                            <button onClick={() => { setDeletingAssignment(item); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-xl transition-all"><Trash2 size={18} /></button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -530,18 +566,16 @@ export default function AssignmentsPage() {
                         </div>
                     )}
                     
-                    {totalItems > 0 && (
-                        <div className="mt-4">
-                            <Pagination 
-                                currentPage={currentPage} 
-                                totalPages={Math.ceil(totalItems / pageSize)} 
-                                pageSize={pageSize} 
-                                pageSizeOptions={[10, 20, 50, 100]} 
-                                onPageChange={setCurrentPage} 
-                                onPageSizeChange={s => { setPageSize(s); setCurrentPage(1); }} 
-                                totalItems={totalItems}
-                            />
-                        </div>
+                    {filteredAssignments.length > 0 && (
+                        <Pagination 
+                            currentPage={currentPage} 
+                            totalPages={Math.max(1, Math.ceil(filteredAssignments.length / pageSize))} 
+                            pageSize={pageSize} 
+                            pageSizeOptions={[5, 10, 20]} 
+                            onPageChange={setCurrentPage} 
+                            onPageSizeChange={s => { setPageSize(s); setCurrentPage(1); }} 
+                            totalItems={filteredAssignments.length}
+                        />
                     )}
                 </>
             )}
@@ -579,7 +613,7 @@ export default function AssignmentsPage() {
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><User size={18} /></div>
                                             <select 
                                                 required 
-                                                disabled={modalMode === 'view'} 
+                                                disabled={modalMode === 'view' || !isAdmin} 
                                                 value={currentAssignment?.dieu_tra_vien || ''} 
                                                 onChange={e => setCurrentAssignment({...currentAssignment, dieu_tra_vien: e.target.value})} 
                                                 className={`${inputCls} pl-12 appearance-none cursor-pointer`}
@@ -594,7 +628,7 @@ export default function AssignmentsPage() {
                                         <div className="relative">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><User size={18} /></div>
                                             <select 
-                                                disabled={modalMode === 'view'} 
+                                                disabled={modalMode === 'view' || !isAdmin} 
                                                 value={(typeof currentAssignment?.can_bo_huong_dan === 'object' ? currentAssignment?.can_bo_huong_dan?.id : currentAssignment?.can_bo_huong_dan) || ''} 
                                                 onChange={e => setCurrentAssignment({...currentAssignment, can_bo_huong_dan: e.target.value})} 
                                                 className={`${inputCls} pl-12 appearance-none cursor-pointer`}

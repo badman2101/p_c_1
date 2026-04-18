@@ -12,6 +12,22 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PetitionsPage from './routes/petitions/page';
 import ProfilePage from './routes/profile/page';
 import AssignmentsPage from './routes/assignments/page';
+import VuanPage from './routes/cases/page';
+
+// Guard chỉ cho phpép admin/super_admin truy cập
+const AdminRoute = ({ children }) => {
+    const location = useLocation();
+    try {
+        const token = localStorage.getItem('token');
+        if (token) {
+            const user = JSON.parse(token);
+            if (user && user.role !== 'admin' && user.role !== 'super_admin') {
+                return <Navigate to="/don_thu" state={{ from: location }} replace />;
+            }
+        }
+    } catch (e) {}
+    return children;
+};
 
 function App() {
     const router = createBrowserRouter([
@@ -29,11 +45,11 @@ function App() {
             children: [
                 {
                     index: true,
-                    element: <DashboardPage />,
+                    element: <AdminRoute><DashboardPage /></AdminRoute>,
                 },
                 {
                     path: "/tai_khoan",
-                    element: <UserPage />,
+                    element: <AdminRoute><UserPage /></AdminRoute>,
                 },
                 {
                     path: "/don_thu",
@@ -46,6 +62,10 @@ function App() {
                 {
                     path: "/nguon_tin",
                     element: <AssignmentsPage />,
+                },
+                {
+                    path: "/vu_an",
+                    element: <VuanPage />,
                 },
             ],
         },

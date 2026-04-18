@@ -74,7 +74,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 
                 <div className="flex items-center gap-x-1 sm:gap-x-2">
                     {/* Tin nhắn nội bộ */}
-                    <button 
+                    {/* <button 
                         className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors dark:hover:bg-slate-800"
                         title="Tin nhắn nội bộ"
                     >
@@ -82,10 +82,10 @@ export const Header = ({ collapsed, setCollapsed }) => {
                         <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#0f172a]">
                             3
                         </span>
-                    </button>
+                    </button> */}
 
                     {/* Đơn thư (quá hạn hoặc cần xử lý) */}
-                    <button 
+                    {/* <button 
                         onClick={() => navigate('/don_thu')}
                         className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors dark:hover:bg-slate-800"
                         title="Đơn thư quá hạn"
@@ -94,10 +94,10 @@ export const Header = ({ collapsed, setCollapsed }) => {
                         <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#0f172a] animate-pulse">
                             2
                         </span>
-                    </button>
+                    </button> */}
 
                     {/* Thông báo chung */}
-                    <button 
+                    {/* <button 
                         className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors dark:hover:bg-slate-800"
                         title="Thông báo hệ thống"
                     >
@@ -105,7 +105,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
                         <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#0f172a]">
                             5
                         </span>
-                    </button>
+                    </button> */}
                 </div>
 
                 <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"></div>

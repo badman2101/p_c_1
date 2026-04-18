@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 
 import { navbarLinks } from "@/constants";
@@ -10,7 +10,22 @@ import { cn } from "@/utils/cn";
 
 import PropTypes from "prop-types";
 
+// Các path chỉ admin/super_admin mới được nhìn thấy trong sidebar
+const ADMIN_ONLY_PATHS = ['/', '/tai_khoan'];
+
 export const Sidebar = forwardRef(({ collapsed }, ref) => {
+    const [isAdmin, setIsAdmin] = useState(true); // mặc định true để tránh náy menu khi load
+
+    useEffect(() => {
+        try {
+            const token = localStorage.getItem('token');
+            if (token) {
+                const user = JSON.parse(token);
+                setIsAdmin(!user || user.role === 'admin' || user.role === 'super_admin');
+            }
+        } catch (e) {}
+    }, []);
+
     return (
         <aside
             ref={ref}
@@ -40,7 +55,9 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
                         className={cn("sidebar-group", collapsed && "md:items-center")}
                     >
                         <p className={cn("sidebar-group-title", collapsed && "md:w-[45px]")}>{navbarLink.title}</p>
-                        {navbarLink.links.map((link) => (
+                        {navbarLink.links
+                            .filter(link => isAdmin || !ADMIN_ONLY_PATHS.includes(link.path))
+                            .map((link) => (
                             <NavLink
                                 key={link.label}
                                 to={link.path}
