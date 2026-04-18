@@ -175,10 +175,14 @@ export default function AssignmentsPage() {
         if (assignment) {
             setCurrentAssignment({ ...assignment });
         } else {
+            // Nếu là user thường, tự động đặt dieu_tra_vien là tên của user đang đăng nhập
+            const defaultInvestigator = currentUser && currentUser.role !== 'admin' && currentUser.role !== 'super_admin'
+                ? (currentUser.name || '')
+                : '';
             setCurrentAssignment({
                 ngay_phan_cong: today,
                 noi_dung: '',
-                dieu_tra_vien: '',
+                dieu_tra_vien: defaultInvestigator,
                 can_bo_huong_dan: '',
                 ket_qua: ''
             });
@@ -314,9 +318,9 @@ export default function AssignmentsPage() {
                         <div className="p-2 bg-blue-600 rounded-lg text-white">
                             <FileText size={24} />
                         </div>
-                        Phân công điều tra
+                        Quản lý tin báo
                     </h1>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Quản lý và theo dõi quá trình phân công cán bộ điều tra</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Quản lý và theo dõi tin báo</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex">
@@ -327,11 +331,9 @@ export default function AssignmentsPage() {
                             <LayoutGrid size={18} />
                         </button>
                     </div>
-                    {isAdmin && (
-                        <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-semibold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-95">
-                            <Plus size={18} /> Thêm phân công
-                        </button>
-                    )}
+                    <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-semibold text-sm shadow-md shadow-blue-500/20 transition-all active:scale-95">
+                        <Plus size={18} /> Thêm mới
+                    </button>
                 </div>
             </div>
 
@@ -339,7 +341,7 @@ export default function AssignmentsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
                     { label: 'Tổng số nhiệm vụ', value: stats.total, icon: Database, color: 'blue' },
-                    { label: 'Phân công hôm nay', value: stats.today, icon: Calendar, color: 'indigo' },
+                    // { label: 'Phân công hôm nay', value: stats.today, icon: Calendar, color: 'indigo' },
                     { label: 'Đã hoàn thành', value: stats.completed, icon: CheckCircle2, color: 'emerald' },
                 ].map((s, i) => (
                     <div key={i} className="bg-white dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
@@ -583,7 +585,7 @@ export default function AssignmentsPage() {
             {/* Modal Biểu mẫu */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[4px] animate-in fade-in duration-300" onClick={closeModal}>
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden transform animate-in slide-in-from-bottom-8 duration-500" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden transform animate-in slide-in-from-bottom-8 duration-500" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
                             <div className="flex items-center gap-4">
                                 <div className={`p-3 rounded-2xl ${modalMode === 'add' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : modalMode === 'edit' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
@@ -611,16 +613,25 @@ export default function AssignmentsPage() {
                                         <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Điều tra viên <span className="text-rose-500">*</span></label>
                                         <div className="relative">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><User size={18} /></div>
-                                            <select 
-                                                required 
-                                                disabled={modalMode === 'view' || !isAdmin} 
-                                                value={currentAssignment?.dieu_tra_vien || ''} 
-                                                onChange={e => setCurrentAssignment({...currentAssignment, dieu_tra_vien: e.target.value})} 
-                                                className={`${inputCls} pl-12 appearance-none cursor-pointer`}
-                                            >
-                                                <option value="" disabled>-- Chọn cán bộ thụ lý --</option>
-                                                {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
-                                            </select>
+                                            {currentUser && currentUser.role !== 'admin' && currentUser.role !== 'super_admin' ? (
+                                                <input
+                                                    type="text"
+                                                    disabled
+                                                    value={currentUser.name || `User ${currentUser.id}`}
+                                                    className={`${inputCls} pl-12`}
+                                                />
+                                            ) : (
+                                                <select 
+                                                    required 
+                                                    disabled={modalMode === 'view'} 
+                                                    value={currentAssignment?.dieu_tra_vien || ''} 
+                                                    onChange={e => setCurrentAssignment({...currentAssignment, dieu_tra_vien: e.target.value})} 
+                                                    className={`${inputCls} pl-12 appearance-none cursor-pointer`}
+                                                >
+                                                    <option value="" disabled>-- Chọn cán bộ thụ lý --</option>
+                                                    {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+                                                </select>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="space-y-2">

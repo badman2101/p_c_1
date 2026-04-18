@@ -136,10 +136,10 @@ export const Header = ({ collapsed, setCollapsed }) => {
                                 <User size={16} />
                                 Hồ sơ cá nhân
                             </button>
-                            <button className="flex w-full items-center gap-x-2 rounded-lg px-2 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
+                            {/* <button className="flex w-full items-center gap-x-2 rounded-lg px-2 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">
                                 <Settings size={16} />
                                 Cài đặt hệ thống
-                            </button>
+                            </button> */}
                             <div className="my-1 h-[1px] w-full bg-slate-100 dark:bg-slate-800"></div>
                             <button onClick={HandleLogout} className="flex w-full items-center gap-x-2 rounded-lg px-2 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30">
                                 <LogOut size={16} />

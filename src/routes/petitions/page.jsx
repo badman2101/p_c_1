@@ -191,13 +191,15 @@ export default function PetitionsPage() {
         if (petition) {
             setCurrentPetition({ ...petition });
         } else {
+            // Nếu là user thường, tự động đặt can_bo_thu_ly là chính user đang đăng nhập
+            const defaultAssignee = currentUser && currentUser.role === 'user' ? currentUser.id : '';
             setCurrentPetition({
                 tieu_de: '',
                 phan_loai: 'Khiếu nại',
                 nguon_tin: '',
                 information_nguoiguidon: '',
                 noi_dung_don: '',
-                can_bo_thu_ly: '',
+                can_bo_thu_ly: defaultAssignee,
                 ket_qua_xu_ly: '',
                 kho_khan: '',
                 ngay_tiep_nhan: today,
@@ -239,7 +241,7 @@ export default function PetitionsPage() {
                 nguon_tin: currentPetition.nguon_tin,
                 information_nguoiguidon: currentPetition.information_nguoiguidon,
                 noi_dung_don: currentPetition.noi_dung_don,
-                can_bo_thu_ly: currentPetition.can_bo_thu_ly || null,
+                can_bo_thu_ly: currentPetition.can_bo_thu_ly ? String(currentPetition.can_bo_thu_ly) : null,
                 ket_qua_xu_ly: currentPetition.ket_qua_xu_ly || '',
                 kho_khan: currentPetition.kho_khan || '',
                 ngay_tiep_nhan: currentPetition.ngay_tiep_nhan || today,
@@ -347,14 +349,12 @@ export default function PetitionsPage() {
                     <button onClick={() => setShowStats(v => !v)} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm transition-all border ${showStats ? 'bg-indigo-600 text-white border-indigo-600 shadow' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400'}`}>
                         <BarChart2 size={17} /> Thống kê
                     </button>
-                    <button onClick={handlePrint} className="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors">
+                    {/* <button onClick={handlePrint} className="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-500 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors">
                         <Printer size={17} /> In danh sách
+                    </button> */}
+                    <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-medium text-sm shadow-sm transition-colors">
+                        <Plus size={17} /> Tiếp nhận đơn mới
                     </button>
-                    {(!currentUser || currentUser.role !== 'user') && (
-                        <button onClick={() => openModal('add')} className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2.5 rounded-lg font-medium text-sm shadow-sm transition-colors">
-                            <Plus size={17} /> Tiếp nhận đơn mới
-                        </button>
-                    )}
                 </div>
             </div>
 
@@ -527,9 +527,18 @@ export default function PetitionsPage() {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-5">
-                                                <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-0.5 line-clamp-1" title={petition.tieu_de}>{petition.tieu_de || '---'}</div>
-                                                <div className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2" title={petition.noi_dung_don}>{petition.noi_dung_don}</div>
-                                                {isOverdue && <span className="mt-1 text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/40 px-1.5 py-0.5 rounded text-[10px] font-semibold inline-block">Quá hạn xử lý</span>}
+                                                <div 
+                                                    onClick={() => openModal('view', petition)}
+                                                    className="flex flex-col gap-1.5 max-w-[280px] bg-slate-50/50 dark:bg-slate-900/30 p-2.5 rounded-lg border border-slate-100/50 dark:border-slate-700/30 shadow-inner cursor-pointer hover:border-blue-300 dark:hover:border-blue-700 transition-all group/content"
+                                                >
+                                                    <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 mb-0.5 line-clamp-1 group-hover/content:text-blue-600 dark:group-hover/content:text-blue-400 transition-colors" title={petition.tieu_de}>
+                                                        {petition.tieu_de || '---'}
+                                                    </div>
+                                                    <div className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 italic" title={petition.noi_dung_don}>
+                                                        "{petition.noi_dung_don}"
+                                                    </div>
+                                                    {isOverdue && <span className="mt-1 w-max text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/40 px-1.5 py-0.5 rounded text-[10px] font-semibold inline-block">Quá hạn xử lý</span>}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-5">
                                                 <div className="flex flex-col gap-1.5">
@@ -620,7 +629,7 @@ export default function PetitionsPage() {
             {/* Modal Biểu mẫu (Thêm/Sửa/Xem chi tiết) */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-[2px]" onClick={closeModal}>
-                    <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white dark:bg-slate-800 rounded-xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
                             <h2 className="text-base font-semibold text-slate-800 dark:text-white flex items-center gap-2">
                                 {modalMode === 'add' ? <Plus className="text-blue-500" size={18}/> : modalMode === 'edit' ? <Edit3 className="text-amber-500" size={18}/> : <Eye className="text-slate-500" size={18}/>}
@@ -682,17 +691,26 @@ export default function PetitionsPage() {
                                         <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Cán bộ thụ lý</label>
                                         <div className="relative">
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={16} /></div>
-                                            <select disabled={modalMode === 'view' || (currentUser && currentUser.role === 'user')} value={(typeof currentPetition?.can_bo_thu_ly === 'object' ? currentPetition?.can_bo_thu_ly?.id : currentPetition?.can_bo_thu_ly) || ''} onChange={e => setCurrentPetition({...currentPetition, can_bo_thu_ly: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
-                                                <option value="">-- Chưa được phân công --</option>
-                                                {users.map(u => <option key={u.id} value={u.id}>{u.name || `User ${u.id}`}</option>)}
-                                            </select>
+                                            {currentUser && currentUser.role === 'user' ? (
+                                                <input
+                                                    type="text"
+                                                    disabled
+                                                    value={users.find(u => String(u.id) === String(currentUser.id))?.name || currentUser.name || `User ${currentUser.id}`}
+                                                    className={`${inputCls} pl-10`}
+                                                />
+                                            ) : (
+                                                <select disabled={modalMode === 'view'} value={(typeof currentPetition?.can_bo_thu_ly === 'object' ? currentPetition?.can_bo_thu_ly?.id : currentPetition?.can_bo_thu_ly) || ''} onChange={e => setCurrentPetition({...currentPetition, can_bo_thu_ly: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
+                                                    <option value="">-- Chưa được phân công --</option>
+                                                    {users.map(u => <option key={u.id} value={u.id}>{u.name || `User ${u.id}`}</option>)}
+                                                </select>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="space-y-1.5 md:col-span-1">
                                         <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Người hướng dẫn</label>
                                         <div className="relative">
                                             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><User size={16} /></div>
-                                            <select disabled={modalMode === 'view' || (currentUser && currentUser.role === 'user')} value={(typeof currentPetition?.can_bo_huong_dan === 'object' ? currentPetition?.can_bo_huong_dan?.id : currentPetition?.can_bo_huong_dan) || ''} onChange={e => setCurrentPetition({...currentPetition, can_bo_huong_dan: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
+                                            <select disabled={modalMode === 'view'} value={(typeof currentPetition?.can_bo_huong_dan === 'object' ? currentPetition?.can_bo_huong_dan?.id : currentPetition?.can_bo_huong_dan) || ''} onChange={e => setCurrentPetition({...currentPetition, can_bo_huong_dan: e.target.value})} className={`${inputCls} pl-10 appearance-none cursor-pointer`}>
                                                 <option value="">-- Chưa có hướng dẫn --</option>
                                                 {users.map(u => <option key={u.id} value={u.id}>{u.name || `User ${u.id}`}</option>)}
                                             </select>

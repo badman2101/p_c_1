@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8000/api/donthu';
-// const BASE_URL = 'https://backend-p-c-1.vercel.app/api/api/donthu';
+// const BASE_URL = 'http://localhost:8000/api/donthu';
+const BASE_URL = 'https://backend-p-c-1.vercel.app/api/api/donthu';
 
 export const donthuApi = {
     async getDonThus(params = {}) {

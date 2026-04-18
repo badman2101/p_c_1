@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Plus, Search, Edit3, Trash2, Eye, X, Filter,
     CheckCircle2, Clock, Inbox, Calendar, FileText, RefreshCw,
@@ -176,12 +176,17 @@ export default function VuanPage() {
         if (caseItem) {
             setCurrentCase({ ...caseItem });
         } else {
+            // Nếu là user thường, tự động đặt can_bo_thu_ly là chính user đang đăng nhập
+            const defaultAssignee = currentUser && currentUser.role !== 'admin' && currentUser.role !== 'super_admin'
+                ? currentUser.id
+                : '';
             setCurrentCase({
                 ngay_khoi_to: today,
                 noi_dung: '',
                 so_luong_bi_can: '',
                 thong_tin_bi_can: '',
-                can_bo_thu_ly: '',
+                bien_phap_ngan_chan: '',
+                can_bo_thu_ly: defaultAssignee,
                 can_bo_huong_dan: '',
                 ket_qua: '',
                 kho_khan: ''
@@ -205,7 +210,8 @@ export default function VuanPage() {
                 noi_dung: currentCase.noi_dung,
                 so_luong_bi_can: currentCase.so_luong_bi_can,
                 thong_tin_bi_can: currentCase.thong_tin_bi_can,
-                can_bo_thu_ly: currentCase.can_bo_thu_ly,
+                bien_phap_ngan_chan: currentCase.bien_phap_ngan_chan || '',
+                can_bo_thu_ly: currentCase.can_bo_thu_ly ? String(currentCase.can_bo_thu_ly) : null,
                 can_bo_huong_dan: currentCase.can_bo_huong_dan,
                 ket_qua: currentCase.ket_qua,
                 kho_khan: currentCase.kho_khan,
@@ -338,11 +344,9 @@ export default function VuanPage() {
                         <button onClick={() => setViewMode('table')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'table' ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><List size={18} /></button>
                         <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><LayoutGrid size={18} /></button>
                     </div>
-                    {(!currentUser || currentUser.role === 'admin' || currentUser.role === 'super_admin') && (
-                        <button onClick={() => openModal('add')} className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl shadow-sm shadow-blue-500/30 flex items-center gap-2 font-semibold text-sm transition-all">
-                            <Plus size={18} /> Thêm vụ án
-                        </button>
-                    )}
+                    <button onClick={() => openModal('add')} className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-xl shadow-sm shadow-blue-500/30 flex items-center gap-2 font-semibold text-sm transition-all">
+                        <Plus size={18} /> Thêm vụ án
+                    </button>
                 </div>
             </div>
 
@@ -433,13 +437,15 @@ export default function VuanPage() {
                     {viewMode === 'table' ? (
                         <div className="bg-white dark:bg-slate-800/80 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[1000px] text-left">
+                                <table className="w-full min-w-[1300px] text-left">
                                     <thead>
                                         <tr className="bg-slate-50 dark:bg-slate-700/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-wider">
                                             <th className="py-4 px-6 w-16 text-center">ID</th>
                                             <th className="py-4 px-6 w-32">Ngày Khởi Tố</th>
                                             <th className="py-4 px-6 w-80">Nội Dung</th>
                                             <th className="py-4 px-6 w-48">Thông Tin Bị Can</th>
+                                            <th className="py-4 px-6 w-48">Ngăn Chặn</th>
+                                            <th className="py-4 px-6 w-48">Khó Khăn</th>
                                             <th className="py-4 px-6">Phụ Trách</th>
                                             <th className="py-4 px-6 w-36">Kết Quả</th>
                                             <th className="py-4 px-6 text-right w-24">Thao Tác</th>
@@ -474,6 +480,16 @@ export default function VuanPage() {
                                                     <div className="flex flex-col gap-1">
                                                         <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><Users size={12}/> {item.so_luong_bi_can || 0} Đối tượng</div>
                                                         <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-1">{item.thong_tin_bi_can || 'Trống'}</div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <div className="text-sm text-slate-700 dark:text-slate-200 line-clamp-2" title={item.bien_phap_ngan_chan}>
+                                                        {item.bien_phap_ngan_chan || '--'}
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    <div className="text-sm text-slate-700 dark:text-slate-200 line-clamp-2" title={item.kho_khan}>
+                                                        {item.kho_khan || '--'}
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6">
@@ -553,6 +569,23 @@ export default function VuanPage() {
                                             "{item.noi_dung}"
                                         </p>
                                     </div>
+                                    
+                                    {(item.bien_phap_ngan_chan || item.kho_khan) && (
+                                        <div className="flex flex-col gap-2 mt-2">
+                                            {item.bien_phap_ngan_chan && (
+                                                <div className="text-[11px] text-violet-600 dark:text-violet-400 bg-violet-50/50 dark:bg-violet-900/20 p-2 rounded-lg border border-violet-100/50 dark:border-violet-800/30">
+                                                    <span className="font-bold uppercase tracking-wider block mb-0.5">Biện pháp ngăn chặn:</span>
+                                                    <span className="line-clamp-2" title={item.bien_phap_ngan_chan}>{item.bien_phap_ngan_chan}</span>
+                                                </div>
+                                            )}
+                                            {item.kho_khan && (
+                                                <div className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-900/20 p-2 rounded-lg border border-amber-100/50 dark:border-amber-800/30">
+                                                    <span className="font-bold uppercase tracking-wider block mb-0.5">Khó khăn:</span>
+                                                    <span className="line-clamp-2" title={item.kho_khan}>{item.kho_khan}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                     
                                     <div className="pt-4 mt-auto border-t border-slate-100 dark:border-slate-700/50 flex justify-between items-center gap-2">
                                         <div className="text-xs font-bold text-slate-400">
@@ -638,19 +671,28 @@ export default function VuanPage() {
                                         <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Cán bộ thụ lý</label>
                                         <div className="relative">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><User size={18} /></div>
-                                            <select
-                                                disabled={modalMode === 'view' || (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'super_admin')}
-                                                value={String(typeof currentCase?.can_bo_thu_ly === 'object' ? currentCase?.can_bo_thu_ly?.id ?? '' : currentCase?.can_bo_thu_ly ?? '')}
-                                                onChange={e => setCurrentCase({...currentCase, can_bo_thu_ly: e.target.value})}
-                                                className={`${inputCls} pl-12 appearance-none cursor-pointer`}
-                                            >
-                                                <option value="">-- Chọn cán bộ thụ lý --</option>
-                                                {users.map(u => (
-                                                    <option key={u.id} value={u.id}>
-                                                        {u.name}{donviList.find(d => String(d.id) === String(u.don_vi)) ? ` - ${donviList.find(d => String(d.id) === String(u.don_vi))?.ten_don_vi || donviList.find(d => String(d.id) === String(u.don_vi))?.name}` : ''}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            {currentUser && currentUser.role !== 'admin' && currentUser.role !== 'super_admin' ? (
+                                                <input
+                                                    type="text"
+                                                    disabled
+                                                    value={users.find(u => String(u.id) === String(currentUser.id))?.name || currentUser.name || `User ${currentUser.id}`}
+                                                    className={`${inputCls} pl-12`}
+                                                />
+                                            ) : (
+                                                <select
+                                                    disabled={modalMode === 'view'}
+                                                    value={String(typeof currentCase?.can_bo_thu_ly === 'object' ? currentCase?.can_bo_thu_ly?.id ?? '' : currentCase?.can_bo_thu_ly ?? '')}
+                                                    onChange={e => setCurrentCase({...currentCase, can_bo_thu_ly: e.target.value})}
+                                                    className={`${inputCls} pl-12 appearance-none cursor-pointer`}
+                                                >
+                                                    <option value="">-- Chọn cán bộ thụ lý --</option>
+                                                    {users.map(u => (
+                                                        <option key={u.id} value={u.id}>
+                                                            {u.name}{donviList.find(d => String(d.id) === String(u.don_vi)) ? ` - ${donviList.find(d => String(d.id) === String(u.don_vi))?.ten_don_vi || donviList.find(d => String(d.id) === String(u.don_vi))?.name}` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="space-y-2">
@@ -658,7 +700,7 @@ export default function VuanPage() {
                                         <div className="relative">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><UserCheck size={18} /></div>
                                             <select
-                                                disabled={modalMode === 'view' || (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'super_admin')}
+                                                disabled={modalMode === 'view'}
                                                 value={String(typeof currentCase?.can_bo_huong_dan === 'object' ? currentCase?.can_bo_huong_dan?.id ?? '' : currentCase?.can_bo_huong_dan ?? '')}
                                                 onChange={e => setCurrentCase({...currentCase, can_bo_huong_dan: e.target.value})}
                                                 className={`${inputCls} pl-12 appearance-none cursor-pointer`}
@@ -709,6 +751,20 @@ export default function VuanPage() {
                                             </div>
                                         ) : (
                                             <textarea disabled={modalMode === 'view'} value={currentCase?.thong_tin_bi_can || ''} onChange={e => setCurrentCase({...currentCase, thong_tin_bi_can: e.target.value})} className={`${inputCls} resize-none h-24`} placeholder="Tên, tuổi, địa chỉ, quê quán..." />
+                                        )}
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2">
+                                            <ClipboardList size={14} className="text-violet-500"/> Biện pháp ngăn chặn ngay sau thông tin bị can
+                                        </label>
+                                        {modalMode === 'view' ? (
+                                            <div className="p-4 bg-violet-50/50 dark:bg-violet-900/20 border border-violet-100/60 dark:border-violet-800/30 rounded-xl">
+                                                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                                                    {currentCase?.bien_phap_ngan_chan || '--'}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <textarea disabled={modalMode === 'view'} value={currentCase?.bien_phap_ngan_chan || ''} onChange={e => setCurrentCase({...currentCase, bien_phap_ngan_chan: e.target.value})} className={`${inputCls} resize-none h-24 bg-violet-50/30 dark:bg-violet-900/10 border-violet-200/60 dark:border-violet-800/50 focus:border-violet-500 focus:ring-violet-500/20`} placeholder="Mô tả biện pháp ngăn chặn được áp dụng..." />
                                         )}
                                     </div>
                                     <div className="space-y-2 md:col-span-2">

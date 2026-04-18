@@ -324,7 +324,7 @@ export default function UserPage() {
                                                 <div className="flex items-center justify-end gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => openModal('view', user)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-md transition-colors" title="Xem"><Eye size={15} /></button>
                                                     <button onClick={() => openModal('edit', user)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-md transition-colors" title="Sửa"><Edit3 size={15} /></button>
-                                                    <button onClick={() => { setDeletingUser(user); setIsDeleteModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-md transition-colors" title="Xóa"><Trash2 size={15} /></button>
+                                                    {/* <button disabled className="p-1.5 text-slate-400 opacity-50 cursor-not-allowed rounded-md transition-colors" title="Vô hiệu hóa"><Trash2 size={15} /></button> */}
                                                 </div>
                                             </td>
                                         </tr>
