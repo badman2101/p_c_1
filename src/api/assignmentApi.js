@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:8000/api/nguon_tin';
-// const BASE_URL = 'https://backend-p-c-1.vercel.app/api/api/nguon_tin';
+// const BASE_URL = 'http://localhost:8000/api/nguon_tin';
+const BASE_URL = 'https://backend-p-c-1.vercel.app/api/api/nguon_tin';
     
 export const assignmentApi = {
     /**
