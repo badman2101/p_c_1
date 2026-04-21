@@ -53,14 +53,14 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 >
                     <ChevronsLeft className={`transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`} size={20} />
                 </button>
-                <div className="hidden items-center gap-x-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 transition-all focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-700 dark:bg-slate-800/50 dark:focus-within:border-blue-500 dark:focus-within:bg-slate-800 dark:focus-within:ring-blue-900/50 md:flex md:w-80">
+                {/* <div className="hidden items-center gap-x-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 transition-all focus-within:border-blue-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-700 dark:bg-slate-800/50 dark:focus-within:border-blue-500 dark:focus-within:bg-slate-800 dark:focus-within:ring-blue-900/50 md:flex md:w-80">
                     <Search size={18} className="text-slate-400" />
                     <input
                         type="text"
                         placeholder="Tìm kiếm hồ sơ, vụ án..."
                         className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-50"
                     />
-                </div>
+                </div> */}
             </div>
             
             <div className="relative flex items-center gap-x-3">

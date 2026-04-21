@@ -5,7 +5,6 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/theme-context";
 import Layout from "@/routes/layout";
-import DashboardPage from "@/routes/dashboard/page";
 import UserPage from "./routes/user/page";
 import LoginPage from "./routes/login/page";
 import ProtectedRoute from './components/ProtectedRoute';
@@ -45,7 +44,7 @@ function App() {
             children: [
                 {
                     index: true,
-                    element: <AdminRoute><DashboardPage /></AdminRoute>,
+                    element: <Navigate to="/don_thu" replace />,
                 },
                 {
                     path: "/tai_khoan",
