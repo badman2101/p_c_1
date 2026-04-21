@@ -46,7 +46,6 @@ export default function PetitionsPage() {
     const [modalMode, setModalMode] = useState('add');
     const [currentPetition, setCurrentPetition] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [dateValidationError, setDateValidationError] = useState(false);
 
     // Delete Modal
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -187,7 +186,6 @@ export default function PetitionsPage() {
 
     const openModal = (mode, petition = null) => {
         setModalMode(mode);
-        setDateValidationError(false);
         if (petition) {
             setCurrentPetition({ ...petition });
         } else {
@@ -211,26 +209,11 @@ export default function PetitionsPage() {
         setIsModalOpen(true);
     };
     
-    const closeModal = () => { setIsModalOpen(false); setCurrentPetition(null); setDateValidationError(false); };
+    const closeModal = () => { setIsModalOpen(false); setCurrentPetition(null); };
     
     // Xử lý lưu đơn thư (thêm mới hoặc cập nhật thông tin)
     const handleSave = async (e) => { 
         e.preventDefault(); 
-        setDateValidationError(false);
-
-        if (currentPetition.han_xu_ly && currentPetition.ngay_tiep_nhan) {
-            const deadline = new Date(currentPetition.han_xu_ly);
-            const receivedDate = new Date(currentPetition.ngay_tiep_nhan);
-            
-            deadline.setHours(0, 0, 0, 0);
-            receivedDate.setHours(0, 0, 0, 0);
-
-            if (deadline <= receivedDate) {
-                setDateValidationError(true);
-                showToast('Hạn xử lý (deadline) phải lớn hơn Ngày tiếp nhận!', 'error');
-                return;
-            }
-        }
 
         setIsSaving(true);
         
@@ -245,7 +228,6 @@ export default function PetitionsPage() {
                 ket_qua_xu_ly: currentPetition.ket_qua_xu_ly || '',
                 kho_khan: currentPetition.kho_khan || '',
                 ngay_tiep_nhan: currentPetition.ngay_tiep_nhan || today,
-                han_xu_ly: currentPetition.han_xu_ly || null,
                 trang_thai: currentPetition.trang_thai || 'Chờ xử lý',
                 can_bo_huong_dan: currentPetition.can_bo_huong_dan || null,
             };
@@ -647,18 +629,11 @@ export default function PetitionsPage() {
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div className="space-y-1.5 md:col-span-1">
-                                        <label className={`text-sm font-medium ${dateValidationError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'} block mb-1`}>Ngày tiếp nhận <span className="text-rose-500">*</span></label>
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-1">Ngày tiếp nhận <span className="text-rose-500">*</span></label>
                                         <div className="relative">
-                                            <div className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${dateValidationError ? 'text-rose-500' : 'text-slate-400'}`}><Calendar size={16} /></div>
-                                            <input type="date" required disabled={modalMode === 'view'} value={currentPetition?.ngay_tiep_nhan ? currentPetition.ngay_tiep_nhan.split('T')[0].split(' ')[0] : ''} onChange={e => { setCurrentPetition({...currentPetition, ngay_tiep_nhan: e.target.value}); setDateValidationError(false); }} className={`${inputCls} pl-10 ${dateValidationError ? '!border-rose-500 !ring-2 !ring-rose-500/20' : ''}`} />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5 md:col-span-1">
-                                        <label className={`text-sm font-medium ${dateValidationError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'} block mb-1`}>Hạn chót xử lý (Deadline)</label>
-                                        <div className="relative">
-                                            <div className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${dateValidationError ? 'text-rose-500' : 'text-slate-400'}`}><Clock size={16} /></div>
-                                            <input type="date" disabled={modalMode === 'view'} value={currentPetition?.han_xu_ly ? currentPetition.han_xu_ly.split('T')[0].split(' ')[0] : ''} onChange={e => { setCurrentPetition({...currentPetition, han_xu_ly: e.target.value}); setDateValidationError(false); }} className={`${inputCls} pl-10 ${dateValidationError ? '!border-rose-500 !ring-2 !ring-rose-500/20' : ''}`} />
+                                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"><Calendar size={16} /></div>
+                                            <input type="date" required disabled={modalMode === 'view'} value={currentPetition?.ngay_tiep_nhan ? currentPetition.ngay_tiep_nhan.split('T')[0].split(' ')[0] : ''} onChange={e => { setCurrentPetition({...currentPetition, ngay_tiep_nhan: e.target.value}); }} className={`${inputCls} pl-10`} />
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
