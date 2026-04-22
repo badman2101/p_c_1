@@ -431,11 +431,12 @@ export default function AssignmentsPage() {
                     {viewMode === 'table' ? (
                         <div className="bg-white dark:bg-slate-800/80 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
+                                <table className="w-full min-w-[1000px] text-left border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50/80 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-widest">
                                             <th className="py-4 px-6 w-20">ID</th>
                                             <th className="py-4 px-6">Ngày ra quyết định phân công</th>
+                                            <th className="py-4 px-6 w-36">Hạn Xử Lý</th>
                                             <th className="py-4 px-6 min-w-[250px]">Nội dung</th>
                                             <th className="py-4 px-6">Điều tra viên</th>
                                             <th className="py-4 px-6">Kết quả</th>
@@ -443,16 +444,37 @@ export default function AssignmentsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                                        {paginatedAssignments.map(item => (
-                                            <tr key={item.id} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group">
+                                        {paginatedAssignments.map(item => {
+                                            const isOverdue = item.han_xu_ly && (!item.ket_qua || item.ket_qua.trim() === '') && new Date(item.han_xu_ly) < new Date(new Date().setHours(0, 0, 0, 0));
+                                            const isKhoiTo = item.ket_qua === 'Khởi tố';
+                                            return (
+                                            <tr key={item.id} className={`transition-colors group ${isKhoiTo ? 'opacity-50 grayscale bg-slate-100/60 dark:bg-slate-800/60' : isOverdue ? 'hover:bg-blue-50/30 dark:hover:bg-blue-900/10 bg-rose-50/40 dark:bg-rose-900/10' : 'hover:bg-blue-50/30 dark:hover:bg-blue-900/10'}`}>
                                                 <td className="py-4 px-6">
-                                                    <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500 text-badge">#{item.id}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        {isOverdue && <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse flex-shrink-0" />}
+                                                        <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500">#{item.id}</span>
+                                                    </div>
                                                 </td>
                                                 <td className="py-4 px-6">
                                                     <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
                                                         <Calendar size={14} className="text-blue-500" />
-                                                        {formatDate(item.ngay_phan_cong)}
+                                                        <span className={isKhoiTo ? 'line-through' : ''}>{formatDate(item.ngay_phan_cong)}</span>
                                                     </div>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    {item.han_xu_ly ? (
+                                                        <div className={`flex flex-col gap-1 ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                                            <div className="flex items-center gap-1.5 text-sm font-bold">
+                                                                <Clock size={13} className={isOverdue ? 'text-rose-500 animate-pulse' : 'text-amber-500'} />
+                                                                {formatDate(item.han_xu_ly)}
+                                                            </div>
+                                                            {isOverdue && (
+                                                                <span className="text-[10px] font-bold bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded w-max">Quá hạn</span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-sm text-slate-400">--</span>
+                                                    )}
                                                 </td>
                                                 <td className="py-4 px-6">
                                                     <div 
@@ -489,17 +511,20 @@ export default function AssignmentsPage() {
                                                 <td className="py-4 px-6 text-right whitespace-nowrap">
                                                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
                                                         <button onClick={() => openModal('view', item)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/40 rounded-lg transition-colors"><Eye size={17} /></button>
-                                                        <button onClick={() => openModal('edit', item)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-lg transition-colors"><Edit3 size={17} /></button>
-                                                        {isAdmin && (
+                                                        {!isKhoiTo && (
+                                                            <button onClick={() => openModal('edit', item)} className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded-lg transition-colors"><Edit3 size={17} /></button>
+                                                        )}
+                                                        {isAdmin && !isKhoiTo && (
                                                             <button onClick={() => { setDeletingAssignment(item); setIsDeleteModalOpen(true); }} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/40 rounded-lg transition-colors"><Trash2 size={17} /></button>
                                                         )}
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                         {paginatedAssignments.length === 0 && (
                                             <tr>
-                                                <td colSpan="6" className="py-20 text-center">
+                                                <td colSpan="7" className="py-20 text-center">
                                                     <Inbox size={48} className="mx-auto mb-4 text-slate-200 dark:text-slate-700" />
                                                     <p className="text-slate-400 font-medium tracking-tight">Không tìm thấy dữ liệu phân công phù hợp</p>
                                                 </td>

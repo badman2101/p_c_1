@@ -189,7 +189,8 @@ export default function VuanPage() {
                 can_bo_thu_ly: defaultAssignee,
                 can_bo_huong_dan: '',
                 ket_qua: '',
-                kho_khan: ''
+                kho_khan: '',
+                phan_loai: ''
             });
         }
         setIsModalOpen(true);
@@ -215,6 +216,7 @@ export default function VuanPage() {
                 can_bo_huong_dan: currentCase.can_bo_huong_dan,
                 ket_qua: currentCase.ket_qua,
                 kho_khan: currentCase.kho_khan,
+                phan_loai: currentCase.phan_loai,
             };
 
             if (modalMode === 'add') { 
@@ -306,6 +308,24 @@ export default function VuanPage() {
         return (
             <span className={`inline-flex items-center px-2.5 py-1 text-xs font-bold rounded-lg border ${colors[result] || defaultColor}`}>
                 {result}
+            </span>
+        );
+    };
+
+    const renderPhanLoaiBadge = (phan_loai) => {
+        if (!phan_loai || phan_loai.trim() === '') return null;
+        
+        const colors = {
+            'Tội phạm ít nghiêm trọng': 'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800/50',
+            'Tội phạm nghiêm trọng': 'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50',
+            'Tội phạm rất nghiêm trọng': 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800/50',
+            'Tội phạm đặc biệt nghiêm trọng': 'bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800/50',
+        };
+
+        const defaultColor = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
+        return (
+            <span className={`inline-flex items-center px-2 py-1 text-[10px] font-bold rounded border uppercase tracking-wider ${colors[phan_loai] || defaultColor}`}>
+                {phan_loai}
             </span>
         );
     };
@@ -437,12 +457,14 @@ export default function VuanPage() {
                     {viewMode === 'table' ? (
                         <div className="bg-white dark:bg-slate-800/80 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[1300px] text-left">
+                                <table className="w-full min-w-[1600px] text-left">
                                     <thead>
                                         <tr className="bg-slate-50 dark:bg-slate-700/80 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-wider">
                                             <th className="py-4 px-6 w-16 text-center">ID</th>
                                             <th className="py-4 px-6 w-32">Ngày Khởi Tố</th>
+                                            <th className="py-4 px-6 w-36">Hạn Xử Lý</th>
                                             <th className="py-4 px-6 w-80">Nội Dung</th>
+                                            <th className="py-4 px-6 w-36">Phân Loại</th>
                                             <th className="py-4 px-6 w-48">Thông Tin Bị Can</th>
                                             <th className="py-4 px-6 w-48">Ngăn Chặn</th>
                                             <th className="py-4 px-6 w-48">Khó Khăn</th>
@@ -452,8 +474,10 @@ export default function VuanPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                        {paginatedCases.map(item => (
-                                            <tr key={item.id} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group">
+                                        {paginatedCases.map(item => {
+                                            const isOverdue = item.han_xu_ly && (!item.ket_qua || item.ket_qua.trim() === '') && new Date(item.han_xu_ly) < new Date(new Date().setHours(0, 0, 0, 0));
+                                            return (
+                                            <tr key={item.id} className={`hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors group ${isOverdue ? 'bg-rose-50/40 dark:bg-rose-900/10' : ''}`}>
                                                 <td className="py-4 px-6 text-center">
                                                     <span className="text-xs font-mono font-bold text-slate-400 dark:text-slate-500">#{item.id}</span>
                                                 </td>
@@ -462,6 +486,21 @@ export default function VuanPage() {
                                                         <Calendar size={14} className="text-blue-500" />
                                                         {formatDate(item.ngay_khoi_to)}
                                                     </div>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    {item.han_xu_ly ? (
+                                                        <div className={`flex flex-col gap-1 ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                                            <div className="flex items-center gap-1.5 text-sm font-bold">
+                                                                <Clock size={13} className={isOverdue ? 'text-rose-500' : 'text-amber-500'} />
+                                                                {formatDate(item.han_xu_ly)}
+                                                            </div>
+                                                            {isOverdue && (
+                                                                <span className="text-[10px] font-bold bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded w-max">Quá hạn</span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-sm text-slate-400">--</span>
+                                                    )}
                                                 </td>
                                                 <td className="py-4 px-6">
                                                     <div 
@@ -475,6 +514,9 @@ export default function VuanPage() {
                                                             "{item.noi_dung || 'Chưa nội dung...'}"
                                                         </p>
                                                     </div>
+                                                </td>
+                                                <td className="py-4 px-6">
+                                                    {renderPhanLoaiBadge(item.phan_loai) || <span className="text-sm text-slate-400">--</span>}
                                                 </td>
                                                 <td className="py-4 px-6">
                                                     <div className="flex flex-col gap-1">
@@ -521,10 +563,11 @@ export default function VuanPage() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
+                                            );
+                                        })}
                                         {paginatedCases.length === 0 && (
                                             <tr>
-                                                <td colSpan="7" className="py-20 text-center">
+                                                <td colSpan="11" className="py-20 text-center">
                                                     <Inbox size={48} className="mx-auto mb-4 text-slate-200 dark:text-slate-700" />
                                                     <p className="text-slate-400 font-medium tracking-tight">Không tìm thấy dữ liệu vụ án phù hợp</p>
                                                 </td>
@@ -538,9 +581,10 @@ export default function VuanPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                             {paginatedCases.map(item => (
                                 <div key={item.id} className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 flex flex-col gap-4 group hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-900/50 transition-all relative overflow-hidden">
-                                    {renderResultBadge(item.ket_qua) && (
-                                        <div className="absolute top-4 right-4">
+                                    {(item.ket_qua || item.phan_loai) && (
+                                        <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
                                             {renderResultBadge(item.ket_qua)}
+                                            {renderPhanLoaiBadge(item.phan_loai)}
                                         </div>
                                     )}
                                     
@@ -736,6 +780,25 @@ export default function VuanPage() {
                                         <div className="relative">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><Users size={18} /></div>
                                             <input type="number" min="0" disabled={modalMode === 'view'} value={currentCase?.so_luong_bi_can || ''} onChange={e => setCurrentCase({...currentCase, so_luong_bi_can: e.target.value})} className={`${inputCls} pl-12 font-bold`} placeholder="Số lượng..." />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest pl-1">Phân loại</label>
+                                        <div className="relative">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><Filter size={18} /></div>
+                                            <select 
+                                                disabled={modalMode === 'view'} 
+                                                value={currentCase?.phan_loai || ''} 
+                                                onChange={e => setCurrentCase({...currentCase, phan_loai: e.target.value})} 
+                                                className={`${inputCls} pl-12 appearance-none cursor-pointer font-semibold focus:border-blue-500 focus:ring-blue-500/20`}
+                                            >
+                                                <option value="">-- Chọn phân loại --</option>
+                                                <option value="Tội phạm ít nghiêm trọng">Tội phạm ít nghiêm trọng</option>
+                                                <option value="Tội phạm nghiêm trọng">Tội phạm nghiêm trọng</option>
+                                                <option value="Tội phạm rất nghiêm trọng">Tội phạm rất nghiêm trọng</option>
+                                                <option value="Tội phạm đặc biệt nghiêm trọng">Tội phạm đặc biệt nghiêm trọng</option>
+                                            </select>
                                         </div>
                                     </div>
                                     

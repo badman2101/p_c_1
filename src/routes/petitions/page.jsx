@@ -463,11 +463,12 @@ export default function PetitionsPage() {
                 <div className="bg-white dark:bg-slate-800/80 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
                     {/* Bảng hiển thị danh sách đơn thư đã qua bộ lọc và phân trang */}
                     <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
-                        <table className="w-full min-w-[1050px] text-left">
+                        <table className="w-full min-w-[1200px] text-left">
                             <thead className="sticky top-0 z-10">
                                 <tr className="bg-slate-50 dark:bg-slate-700/80 border-b border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wide">
                                     <th className="py-3.5 px-5 whitespace-nowrap">Mã Đơn</th>
                                     <th className="py-3.5 px-5 w-[140px]">Thông tin loại</th>
+                                    <th className="py-3.5 px-5 w-[140px]">Hạn Xử Lý</th>
                                     <th className="py-3.5 px-5 min-w-[160px]">Người gửi & Nguồn</th>
                                     <th className="py-3.5 px-5 min-w-[220px]">Tiêu đề & Nội Dung</th>
                                     <th className="py-3.5 px-5 w-[140px]">Phân công</th>
@@ -496,10 +497,20 @@ export default function PetitionsPage() {
                                                 <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5" title="Ngày tiếp nhận">
                                                     <Calendar size={11} /> Nhận: {formatDate(petition.ngay_tiep_nhan)}
                                                 </div>
-                                                {petition.han_xu_ly && (
-                                                    <div className={`text-xs flex items-center gap-1 mt-0.5 ${isOverdue ? 'text-rose-500 font-semibold' : 'text-amber-600 dark:text-amber-500'}`} title="Hạn xử lý">
-                                                        <Clock size={11} /> Hạn: {formatDate(petition.han_xu_ly)}
+                                            </td>
+                                            <td className="py-4 px-5">
+                                                {petition.han_xu_ly ? (
+                                                    <div className={`flex flex-col gap-1 ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                                        <div className="flex items-center gap-1.5 text-sm font-bold">
+                                                            <Clock size={13} className={isOverdue ? 'text-rose-500 animate-pulse' : 'text-amber-500'} />
+                                                            {formatDate(petition.han_xu_ly)}
+                                                        </div>
+                                                        {isOverdue && (
+                                                            <span className="text-[10px] font-bold bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded w-max">Quá hạn</span>
+                                                        )}
                                                     </div>
+                                                ) : (
+                                                    <span className="text-sm text-slate-400">--</span>
                                                 )}
                                             </td>
                                             <td className="py-4 px-5">
@@ -572,7 +583,7 @@ export default function PetitionsPage() {
                                 })}
                                 {filteredPetitions.length === 0 && (
                                     <tr>
-                                        <td colSpan="7" className="py-16 text-center text-slate-400 dark:text-slate-500">
+                                        <td colSpan="8" className="py-16 text-center text-slate-400 dark:text-slate-500">
                                             <Inbox size={38} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" strokeWidth={1.5} />
                                             <p className="text-sm font-medium">Không tìm thấy đơn thư</p>
                                         </td>

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// const BASE_URL = 'http://localhost:8000/api/vuan';
-const BASE_URL = 'https://backend-p-c-1.vercel.app/api/api/vuan';
+const BASE_URL = 'http://localhost:8000/api/vuan';
+// const BASE_URL = 'https://backend-p-c-1.vercel.app/api/api/vuan';
 
 export const vuanApi = {
     async getVuans(params = {}) {
