@@ -1,15 +1,21 @@
 import axios from 'axios';
 
-// const BASE_URL = 'http://localhost:8000/api/vuan';
-const BASE_URL = 'https://backend-p-c-1.vercel.app/api/api/vuan';
-    
+const BASE_URL = 'http://localhost:8000/api/vuan';
+// const BASE_URL = 'https://backend-p-c-1.vercel.app/api/api/vuan';
+
+const token = localStorage.getItem('access_token');
+
+const headers = {
+    'Authorization': `Bearer ${token}`
+};
+
 export const assignmentApi = {
     /**
      * Lấy danh sách phân công có phân trang và tìm kiếm
      * @param {Object} params { page, per_page, q }
      */
     async getAssignments(params = {}) {
-        const response = await axios.get(BASE_URL, { params });
+        const response = await axios.get(BASE_URL, { params, headers });
         return response.data;
     },
 
@@ -18,7 +24,7 @@ export const assignmentApi = {
      * @param {Number|String} id 
      */
     async getAssignment(id) {
-        const response = await axios.get(`${BASE_URL}/${id}`);
+        const response = await axios.get(`${BASE_URL}/${id}`, headers);
         return response.data;
     },
 
@@ -27,7 +33,7 @@ export const assignmentApi = {
      * @param {Object} data { ngay_phan_cong, noi_dung, dieu_tra_vien, ket_qua }
      */
     async createAssignment(data) {
-        const response = await axios.post(BASE_URL, data);
+        const response = await axios.post(BASE_URL, data, headers);
         return response.data;
     },
 
@@ -37,7 +43,7 @@ export const assignmentApi = {
      * @param {Object} data Các trường cần cập nhật
      */
     async updateAssignment(id, data) {
-        const response = await axios.put(`${BASE_URL}/${id}`, data);
+        const response = await axios.put(`${BASE_URL}/${id}`, data, headers);
         return response.data;
     },
 
@@ -46,7 +52,7 @@ export const assignmentApi = {
      * @param {Number|String} id 
      */
     async deleteAssignment(id) {
-        const response = await axios.delete(`${BASE_URL}/${id}`);
+        const response = await axios.delete(`${BASE_URL}/${id}`, headers);
         return response.data;
     }
 };

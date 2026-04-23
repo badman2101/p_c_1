@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/hooks/use-theme";
 import { Bell, ChevronsLeft, Moon, Search, Sun, User, LogOut, Settings, MessageSquare, FileText } from "lucide-react";
-import profileImg from "@/assets/profile-image.jpg";
+import avatarPlaceholder from "@/assets/avatar-placeholder.svg";
 import PropTypes from "prop-types";
 
 export const Header = ({ collapsed, setCollapsed }) => {
@@ -120,9 +120,11 @@ export const Header = ({ collapsed, setCollapsed }) => {
                         onClick={toggleModal}
                     >
                         <img
-                            src={profileImg}
+                            src={avatarPlaceholder}
                             alt="Profile"
                             className="h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                         />
                     </button>
                     

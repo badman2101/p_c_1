@@ -4,7 +4,6 @@ import { notification } from 'antd'
 import { loginApi } from '../../api/loginApi'
 import { useNavigate } from 'react-router-dom'
 import { Shield, Fingerprint, Lock, Mail, ChevronRight } from 'lucide-react'
-import bgImage from '../../assets/login-bg.png'
 
 function LoginPage() {
   const { register, handleSubmit, formState: { isSubmitting } } = useForm()
@@ -28,6 +27,7 @@ function LoginPage() {
         })
         // Save user information to localStorage or sessionStorage
         localStorage.setItem('token', JSON.stringify(response.info))
+        localStorage.setItem('access_token', response.access_token)
         navigate('/') // Redirect to home page
       } else {
         notification.error({
@@ -50,7 +50,10 @@ function LoginPage() {
       {/* Background Image with Overlay */}
       <div 
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 scale-105 animate-pulse-slow"
-        style={{ backgroundImage: `url(${bgImage})` }}
+        style={{
+          background:
+            'radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.35), transparent 35%), radial-gradient(circle at 80% 70%, rgba(6, 182, 212, 0.25), transparent 30%), linear-gradient(180deg, #0f172a 0%, #020617 100%)'
+        }}
       >
         <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-[2px]"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/50 to-slate-950"></div>
@@ -190,11 +193,11 @@ function LoginPage() {
           animation: gradient-x 4s ease infinite;
         }
         .animate-pulse-slow {
-          animation: pulse-slow 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          animation: pulse-slow 12s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         @keyframes pulse-slow {
           0%, 100% { opacity: 1; }
-          50% { opacity: 0.85; }
+          50% { opacity: 0.9; }
         }
       `}} />
     </div>

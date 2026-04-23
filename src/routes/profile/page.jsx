@@ -5,7 +5,7 @@ import {
     User, Mail, Phone, MapPin, Briefcase, Calendar, 
     Shield, Key, Upload, Edit3, CheckCircle2, AlertTriangle, X
 } from "lucide-react";
-import profileImg from "@/assets/profile-image.jpg";
+import avatarPlaceholder from "@/assets/avatar-placeholder.svg";
 import { userApi } from "../../api/userApi";
 
 const ROLE_CONFIG = {
@@ -98,6 +98,14 @@ const ProfilePage = () => {
             showToast('Vui lòng nhập mật khẩu mới', 'error');
             return;
         }
+        if (formData.newPassword.length < 6) {
+            showToast('Mật khẩu mới phải có ít nhất 6 ký tự', 'error');
+            return;
+        }
+        if (formData.currentPassword === formData.newPassword) {
+            showToast('Mật khẩu mới không được trùng mật khẩu cũ', 'error');
+            return;
+        }
         if (formData.newPassword !== formData.confirmPassword) {
             showToast('Mật khẩu xác nhận không khớp', 'error');
             return;
@@ -105,15 +113,42 @@ const ProfilePage = () => {
         
         setIsSaving(true);
         try {
-            // Note: In real app, currentPassword would be verified by backend.
-            const updatedUser = { ...currentUser, password: formData.newPassword };
-            await userApi.updateUser(currentUser.id, updatedUser);
+            const userInfo = localStorage.getItem('token');
+            const payload = {
+                // Common backend conventions (Laravel/Express):
+                user_id: JSON.parse(userInfo).id,
+                password_old: formData.currentPassword,
+                password: formData.newPassword,
+                password_confirmation: formData.confirmPassword,
+            };
+
+            const res = await userApi.changePasssword(payload);
+
+            // Some backends return HTTP 200 even when "failed".
+            const isSuccess =
+                res === true ||
+                res?.success === true ||
+                res?.status === true ||
+                res?.ok === true;
+
+            if (!isSuccess) {
+                const message =
+                    res?.message ||
+                    res?.error ||
+                    'Mật khẩu hiện tại không đúng hoặc không thể đổi mật khẩu.';
+                throw new Error(message);
+            }
             
             // Clear password fields
             setFormData(prev => ({ ...prev, currentPassword: "", newPassword: "", confirmPassword: "" }));
             showToast('Đổi mật khẩu thành công!');
         } catch (error) {
-            showToast('Không thể đổi mật khẩu. Vui lòng thử lại.', 'error');
+            const message =
+                error?.response?.data?.message ||
+                error?.response?.data?.error ||
+                error?.message ||
+                'Không thể đổi mật khẩu. Vui lòng thử lại.';
+            showToast(message, 'error');
         } finally {
             setIsSaving(false);
         }
@@ -140,7 +175,13 @@ const ProfilePage = () => {
                     <div className="card shadow-sm bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-6 flex flex-col items-center">
                         <div className="relative group mb-4">
                             <div className="h-32 w-32 overflow-hidden rounded-full border-4 border-slate-100 dark:border-slate-800 relative shadow-md">
-                                <img src={profileImg} alt="Profile" className="h-full w-full object-cover" />
+                                <img
+                                    src={avatarPlaceholder}
+                                    alt="Profile"
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                    decoding="async"
+                                />
                             </div>
                             <button className="absolute bottom-0 right-0 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-colors">
                                 <Upload size={16} />
@@ -311,6 +352,8 @@ const ProfilePage = () => {
                                                     name="currentPassword"
                                                     value={formData.currentPassword}
                                                     onChange={handleInputChange}
+                                                    disabled={isSaving}
+                                                    autoComplete="current-password"
                                                     placeholder="••••••••" 
                                                     className="w-full pl-10 pr-4 py-3 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all shadow-sm" 
                                                 />
@@ -330,6 +373,8 @@ const ProfilePage = () => {
                                                     name="newPassword"
                                                     value={formData.newPassword}
                                                     onChange={handleInputChange}
+                                                    disabled={isSaving}
+                                                    autoComplete="new-password"
                                                     placeholder="••••••••" 
                                                     className="w-full pl-10 pr-4 py-3 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all shadow-sm" 
                                                 />
@@ -347,6 +392,8 @@ const ProfilePage = () => {
                                                     name="confirmPassword"
                                                     value={formData.confirmPassword}
                                                     onChange={handleInputChange}
+                                                    disabled={isSaving}
+                                                    autoComplete="new-password"
                                                     placeholder="••••••••" 
                                                     className="w-full pl-10 pr-4 py-3 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all shadow-sm" 
                                                 />
@@ -378,12 +425,12 @@ const ProfilePage = () => {
                 <div className={`fixed bottom-6 right-6 z-[200] flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg border animate-in slide-in-from-bottom-4 duration-300 ${
                     toast.type === 'error'
                         ? 'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400'
-                        : 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400'
                 }`}>
                     {toast.type === 'error' ? (
                         <AlertTriangle size={18} className="text-rose-500 dark:text-rose-400 flex-shrink-0" />
                     ) : (
-                        <CheckCircle2 size={18} className="text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
+                        <CheckCircle2 size={18} className="text-blue-500 dark:text-blue-400 flex-shrink-0" />
                     )}
                     <span className="text-sm font-medium">{toast.message}</span>
                     <button onClick={() => setToast(null)} className="ml-2 text-current opacity-50 hover:opacity-100 transition-opacity">

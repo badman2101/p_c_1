@@ -1,8 +1,5 @@
 import { ChartColumn, FileQuestion, Home, NotepadText, Package, PackagePlus, Settings, ShoppingBag, UserCheck, UserPlus, Users, Mail, Briefcase } from "lucide-react";
 
-import ProfileImage from "@/assets/profile-image.jpg";
-import ProductImage from "@/assets/product-image.jpg";
-
 export const navbarLinks = [
     {
         title: "Hệ thống",
